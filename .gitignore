@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Credentials (if any)
+*.pem
+*.key
+credentials.json
+secrets.json
+
+# Claude state files (managed by Claude Code, not config)
+statsig/
+debug/
+file-history/
+history.jsonl
+shell-snapshots/
+todos/
+projects/
+lessons/

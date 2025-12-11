@@ -1,0 +1,28 @@
+{
+  "name": "mermaid-renderer",
+  "version": "1.0.0",
+  "description": "Render Mermaid diagrams to SVG with ELK layout support",
+  "main": "render-mermaid.js",
+  "bin": {
+    "render-mermaid": "./render-mermaid.js",
+    "process-mermaid-doc": "./process-document.js"
+  },
+  "scripts": {
+    "render": "node render-mermaid.js",
+    "process": "node process-document.js"
+  },
+  "keywords": [
+    "mermaid",
+    "diagram",
+    "svg",
+    "elk",
+    "puppeteer"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "marked": "^17.0.1",
+    "md-to-pdf": "^5.2.5",
+    "puppeteer": "^24.0.0"
+  }
+}
