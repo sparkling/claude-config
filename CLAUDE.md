@@ -1,5 +1,29 @@
 # Global Claude Instructions
 
+---
+## ⛔️ ABSOLUTE BAN: `git checkout` IS FORBIDDEN ⛔️
+---
+
+**I AM BANNED FROM RUNNING `git checkout`. THIS IS A HARD BLOCK.**
+
+```
+█████████████████████████████████████████████████████████████
+█  STOP! DO NOT RUN: git checkout                           █
+█  THIS COMMAND IS GLOBALLY BANNED. NO EXCEPTIONS.          █
+█████████████████████████████████████████████████████████████
+```
+
+**BEFORE typing `git checkout`, I MUST:**
+1. STOP immediately
+2. Remember: THIS COMMAND IS BANNED
+3. Use Edit tool to fix files instead
+4. ASK the user if they want to restore from git
+
+**There is NO scenario where I run `git checkout` without explicit user approval.**
+**Not to switch branches. Not to restore files. Not for any reason.**
+
+---
+
 ## CRITICAL: Planning and Approval Workflow - MANDATORY
 
 **RULE 1: ALWAYS CREATE A PLAN FIRST**
@@ -102,13 +126,15 @@ These commands are **FILE OPERATIONS ONLY** - they do NOT include permission to 
 - "delete X from Y" - means Edit the file, then STOP
 
 **ONLY these exact words give permission to commit:**
-- "commit"
+- "commit" (means: commit ALL changed and new files)
 - "commit this"
 - "commit these changes"
-- "push"
+- "push" (means: commit ALL files, then push)
 - "push this"
 - "git commit"
 - "git push"
+
+**CRITICAL: "commit" by itself means commit EVERYTHING. You do NOT need the user to say "commit everything".**
 
 **If the user says "update gitignore":**
 1. ✅ Update the .gitignore file
@@ -138,6 +164,66 @@ When the user DOES give explicit permission to commit:
 5. Create comprehensive commit message covering all changes
 
 **NEVER leave partially-completed work uncommitted if the user asked you to commit.**
+
+### MANDATORY COMMIT WORKFLOW CHECKLIST
+
+**STOP! Before running ANY git commands, verify you will follow this EXACT workflow:**
+
+**Phase 1: Investigation (ONE message with parallel commands)**
+```bash
+# Run these THREE commands in PARALLEL in a SINGLE message:
+git status              # See ALL changed and untracked files
+git diff --stat         # See what changed
+git log -5 --format='%s'  # See recent commit style
+```
+
+**Phase 2: Analysis (in message text, NOT as tool calls)**
+- Review ALL files from git status (both modified AND untracked)
+- If there are untracked files, decide:
+  - Include them if related to the change
+  - ASK user which files to include if multiple unrelated changes
+- Draft commit message following repo style
+
+**Phase 3: Commit (ONE message with sequential commands)**
+```bash
+# Run these commands in a SINGLE message (use && for sequencing):
+git add <files>         # Add ALL relevant files (don't leave orphans)
+git commit -m "$(cat <<'EOF'
+<message>
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
+EOF
+)"
+git status              # VERIFY commit succeeded (MUST run this!)
+```
+
+**Phase 4: Push (ONLY if user said "push")**
+```bash
+git push origin main    # Only if user explicitly said "push"
+```
+
+**CRITICAL VIOLATIONS TO AVOID:**
+- ❌ Running git commands in separate messages (must be in ONE message)
+- ❌ Skipping `git status` after commit
+- ❌ Ignoring untracked files without asking user
+- ❌ Not using HEREDOC for commit message
+- ❌ Committing only some files when user said "everything"
+
+**IF YOU VIOLATED ANY OF THESE, YOU FAILED THE COMMIT WORKFLOW.**
+
+### What "commit" means (DEFAULT BEHAVIOR):
+
+When user says "commit" (or "commit everything" or "push"):
+- **ALWAYS run `git status` FIRST** and review EVERY file (modified + untracked)
+- **DEFAULT: Commit ALL files unless there's a reason not to**
+- Do NOT assume "commit" means "only the files I just edited"
+- Include ALL files that are part of the current work
+- If there are clearly unrelated files (e.g., different feature), ASK:
+  - "I see untracked files [X, Y, Z]. Should I include these or commit only [current work files]?"
+- **NEVER** silently ignore files then ask "any files left not committed?" - that proves you failed
+- **NEVER** leave files behind without asking first
+
+**Rule of thumb:** If you're unsure, include the files. Better to ask "should I exclude X?" than to silently ignore.
 
 ---
 
@@ -172,3 +258,48 @@ Even if:
 Using git to "fix" errors **DESTROYS ALL UNCOMMITTED WORK** in that file. This has caused **CATASTROPHIC DATA LOSS** multiple times, wiping out hours of work.
 
 **VIOLATION OF THIS RULE IS UNACCEPTABLE.**
+
+---
+
+## E2E Testing Protocol
+
+**ALWAYS run E2E tests through the Makefile, NEVER run pytest directly.**
+
+### Correct Way to Run E2E Tests:
+
+```bash
+cd tools/local-dev && make test
+```
+
+### Why This Matters:
+
+The Makefile validation script (`validate-test-freshness.sh`):
+1. Detects uncommitted changes (marks SHA as `-dirty`)
+2. Compares current code SHA vs deployed images
+3. **Auto-rebuilds and redeploys** if code is stale
+4. Ensures tests run against **latest code**, not old deployed images
+
+### WRONG ❌
+
+```bash
+pytest tests/e2e/tests/test_notebook_execution.py -v
+```
+
+This **bypasses validation** and tests will run against **old k3d deployments** (6+ hours stale).
+
+### Results Will Be Misleading:
+
+- Tests fail on bugs you just fixed (old code still deployed)
+- Tests pass on bugs you just introduced (old code doesn't have them yet)
+- Completely wastes time debugging non-existent issues
+
+### Verification:
+
+After running tests, verify deployed SHA matches:
+
+```bash
+kubectl describe pod -n e2e-test -l app=control-plane | grep "Image:"
+git rev-parse --short HEAD
+```
+
+They should match (or current SHA should have `-dirty` suffix if uncommitted changes).
