@@ -1,4 +1,85 @@
 {
-  "version": 1,
-  "plugins": {}
+  "version": 2,
+  "plugins": {
+    "context7@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/Users/henrik/.claude/plugins/cache/claude-plugins-official/context7/e30768372b41",
+        "version": "e30768372b41",
+        "installedAt": "2025-12-16T22:24:24.255Z",
+        "lastUpdated": "2026-01-21T10:59:26.145Z",
+        "gitCommitSha": "c94ad24187f90bbc07bb2fde284a843239136668"
+      }
+    ],
+    "code-review@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/Users/henrik/.claude/plugins/cache/claude-plugins-official/code-review/e30768372b41",
+        "version": "e30768372b41",
+        "installedAt": "2025-12-16T22:24:42.562Z",
+        "lastUpdated": "2026-01-21T10:59:26.154Z",
+        "gitCommitSha": "c94ad24187f90bbc07bb2fde284a843239136668"
+      }
+    ],
+    "commit-commands@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/Users/henrik/.claude/plugins/cache/claude-plugins-official/commit-commands/e30768372b41",
+        "version": "e30768372b41",
+        "installedAt": "2025-12-16T22:24:52.473Z",
+        "lastUpdated": "2026-01-21T10:59:26.162Z",
+        "gitCommitSha": "c94ad24187f90bbc07bb2fde284a843239136668"
+      }
+    ],
+    "feature-dev@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/Users/henrik/.claude/plugins/cache/claude-plugins-official/feature-dev/e30768372b41",
+        "version": "e30768372b41",
+        "installedAt": "2025-12-16T22:25:22.764Z",
+        "lastUpdated": "2026-01-21T10:59:26.170Z",
+        "gitCommitSha": "c94ad24187f90bbc07bb2fde284a843239136668"
+      }
+    ],
+    "github@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/Users/henrik/.claude/plugins/cache/claude-plugins-official/github/e30768372b41",
+        "version": "e30768372b41",
+        "installedAt": "2025-12-16T22:25:33.650Z",
+        "lastUpdated": "2026-01-21T10:59:26.177Z",
+        "gitCommitSha": "c94ad24187f90bbc07bb2fde284a843239136668"
+      }
+    ],
+    "frontend-design@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/Users/henrik/.claude/plugins/cache/claude-plugins-official/frontend-design/e30768372b41",
+        "version": "e30768372b41",
+        "installedAt": "2025-12-16T22:26:51.842Z",
+        "lastUpdated": "2026-01-21T10:59:26.183Z",
+        "gitCommitSha": "c94ad24187f90bbc07bb2fde284a843239136668"
+      }
+    ],
+    "ralph-wiggum@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/Users/henrik/.claude/plugins/cache/claude-plugins-official/ralph-wiggum/bf48ae6c75e7",
+        "version": "bf48ae6c75e7",
+        "installedAt": "2025-12-16T22:27:05.357Z",
+        "lastUpdated": "2026-01-06T22:14:02.573Z",
+        "gitCommitSha": "c94ad24187f90bbc07bb2fde284a843239136668"
+      }
+    ],
+    "ralph-loop@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/Users/henrik/.claude/plugins/cache/claude-plugins-official/ralph-loop/e30768372b41",
+        "version": "e30768372b41",
+        "installedAt": "2026-01-10T01:22:58.809Z",
+        "lastUpdated": "2026-01-21T10:59:26.192Z",
+        "gitCommitSha": "7a53644612ceca20e4b8bc7219bfa98d85cd9fd7"
+      }
+    ]
+  }
 }
