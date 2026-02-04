@@ -104,126 +104,47 @@ Before executing any plan, verify ALL of these:
 ✅ **RIGHT:**
 - User: "Please continue the conversation from where we left it off" → I review what was done, report plan is complete, and ASK for permission to execute
 
-**RULE 2: NEVER COMMIT WITHOUT EXPLICIT APPROVAL**
+**RULE 2: ALWAYS COMMIT AFTER COMPLETING AN OPERATION**
 
-**NEVER use `git commit` or `git push` without EXPLICIT user order or approval:**
-- Do NOT commit after making changes "to save work"
-- Do NOT commit because "it seems like a good stopping point"
-- Do NOT commit to "clean up" or "organize" work
-- Do NOT commit even if you think it's what the user wants
+**ALWAYS create a git commit after completing any file operation:**
+- Commit after making changes to save work
+- Commit at logical stopping points
+- Commit to preserve progress
+- This protects against accidental data loss
 
-**YOU MUST WAIT FOR THE USER TO EXPLICITLY SAY: "commit" or "commit this" or "push this"**
+**After ANY file edit/write operation, IMMEDIATELY:**
+1. Run `git status` to see all changes
+2. Stage all relevant files
+3. Create a commit with a descriptive message
+4. Report to the user what was committed
 
-### CRITICAL: What is NOT Permission to Commit
+### Why this rule exists:
 
-These commands are **FILE OPERATIONS ONLY** - they do NOT include permission to commit:
-- "update X" - means Edit the file, then STOP
-- "fix X" - means Edit the file, then STOP
-- "change X" - means Edit the file, then STOP
-- "modify X" - means Edit the file, then STOP
-- "add X to Y" - means Edit the file, then STOP
-- "create X" - means Write the file, then STOP
-- "delete X from Y" - means Edit the file, then STOP
-
-**ONLY these exact words give permission to commit:**
-- "commit" (means: commit ALL changed and new files)
-- "commit this"
-- "commit these changes"
-- "push" (means: commit ALL files, then push)
-- "push this"
-- "git commit"
-- "git push"
-
-**CRITICAL: "commit" by itself means commit EVERYTHING. You do NOT need the user to say "commit everything".**
-
-**If the user says "update gitignore":**
-1. ✅ Update the .gitignore file
-2. ✅ Show what you changed
-3. ❌ DO NOT commit
-4. ⏸️ WAIT for user to say "commit"
-
-**If the user says "update gitignore and commit":**
-1. ✅ Update the .gitignore file
-2. ✅ Commit it
-3. ⏸️ WAIT for user to say "push" (do NOT auto-push)
-
-### What to do instead:
-
-1. Make your changes using Edit/Write tools
-2. **STOP and tell the user what you changed**
-3. **WAIT for the user to say "commit"**
-4. Only then: create the commit
+Uncommitted work can be lost if something goes wrong. Frequent commits create restore points and protect against data loss. The user can always squash commits later if needed.
 
 **RULE 3: COMMIT ALL FILES - LEAVE NOTHING BEHIND**
 
-When the user DOES give explicit permission to commit:
+When committing:
 1. Use `git status` to see ALL changed and untracked files
 2. **Review the COMPLETE list** of files that need committing
 3. Add ALL relevant files (don't leave orphaned files behind)
-4. If files are unrelated to the commit, ask the user which files to include
-5. Create comprehensive commit message covering all changes
+4. Create comprehensive commit message covering all changes
 
-**NEVER leave partially-completed work uncommitted if the user asked you to commit.**
+**NEVER leave partially-completed work uncommitted.**
 
-### MANDATORY COMMIT WORKFLOW CHECKLIST
+### COMMIT WORKFLOW
 
-**STOP! Before running ANY git commands, verify you will follow this EXACT workflow:**
-
-**Phase 1: Investigation (ONE message with parallel commands)**
 ```bash
-# Run these THREE commands in PARALLEL in a SINGLE message:
-git status              # See ALL changed and untracked files
-git diff --stat         # See what changed
-git log -5 --format='%s'  # See recent commit style
-```
-
-**Phase 2: Analysis (in message text, NOT as tool calls)**
-- Review ALL files from git status (both modified AND untracked)
-- If there are untracked files, decide:
-  - Include them if related to the change
-  - ASK user which files to include if multiple unrelated changes
-- Draft commit message following repo style
-
-**Phase 3: Commit (ONE message with sequential commands)**
-```bash
-# Run these commands in a SINGLE message (use && for sequencing):
-git add <files>         # Add ALL relevant files (don't leave orphans)
-git commit -m "$(cat <<'EOF'
+# Run in a SINGLE message:
+git status && git add <files> && git commit -m "$(cat <<'EOF'
 <message>
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
+
+Co-Authored-By: Claude <noreply@anthropic.com>
 EOF
-)"
-git status              # VERIFY commit succeeded (MUST run this!)
+)" && git status
 ```
 
-**Phase 4: Push (ONLY if user said "push")**
-```bash
-git push origin main    # Only if user explicitly said "push"
-```
-
-**CRITICAL VIOLATIONS TO AVOID:**
-- ❌ Running git commands in separate messages (must be in ONE message)
-- ❌ Skipping `git status` after commit
-- ❌ Ignoring untracked files without asking user
-- ❌ Not using HEREDOC for commit message
-- ❌ Committing only some files when user said "everything"
-
-**IF YOU VIOLATED ANY OF THESE, YOU FAILED THE COMMIT WORKFLOW.**
-
-### What "commit" means (DEFAULT BEHAVIOR):
-
-When user says "commit" (or "commit everything" or "push"):
-- **ALWAYS run `git status` FIRST** and review EVERY file (modified + untracked)
-- **DEFAULT: Commit ALL files unless there's a reason not to**
-- Do NOT assume "commit" means "only the files I just edited"
-- Include ALL files that are part of the current work
-- If there are clearly unrelated files (e.g., different feature), ASK:
-  - "I see untracked files [X, Y, Z]. Should I include these or commit only [current work files]?"
-- **NEVER** silently ignore files then ask "any files left not committed?" - that proves you failed
-- **NEVER** leave files behind without asking first
-
-**Rule of thumb:** If you're unsure, include the files. Better to ask "should I exclude X?" than to silently ignore.
+**Do NOT push unless user explicitly says "push".**
 
 ---
 
@@ -263,21 +184,27 @@ Using git to "fix" errors **DESTROYS ALL UNCOMMITTED WORK** in that file. This h
 
 ## E2E Testing Protocol
 
-**ALWAYS run E2E tests through the Makefile, NEVER run pytest directly.**
+**ALWAYS run E2E tests through the Makefile in the project root, NEVER run pytest directly.**
 
 ### Correct Way to Run E2E Tests:
 
 ```bash
-cd tools/local-dev && make test
+# Run all E2E tests against GKE London
+make test TYPE=e2e CLUSTER=gke-london
+
+# Run a specific notebook
+make test TYPE=e2e CLUSTER=gke-london NOTEBOOK=03_managing_resources
+
+# Run with multiple workers (parallel)
+make test TYPE=e2e CLUSTER=gke-london WORKERS=2
 ```
 
-### Why This Matters:
+### Available Clusters:
 
-The Makefile validation script (`validate-test-freshness.sh`):
-1. Detects uncommitted changes (marks SHA as `-dirty`)
-2. Compares current code SHA vs deployed images
-3. **Auto-rebuilds and redeploys** if code is stale
-4. Ensures tests run against **latest code**, not old deployed images
+| Cluster | Description |
+|---------|-------------|
+| `gke-london` | GKE production (https://api.hsbc.sparklingideas.co.uk) |
+| `orbstack` | Local k3d cluster |
 
 ### WRONG ❌
 
@@ -285,21 +212,10 @@ The Makefile validation script (`validate-test-freshness.sh`):
 pytest tests/e2e/tests/test_notebook_execution.py -v
 ```
 
-This **bypasses validation** and tests will run against **old k3d deployments** (6+ hours stale).
+This **bypasses validation** and tests will run against **old deployments**.
 
 ### Results Will Be Misleading:
 
 - Tests fail on bugs you just fixed (old code still deployed)
 - Tests pass on bugs you just introduced (old code doesn't have them yet)
 - Completely wastes time debugging non-existent issues
-
-### Verification:
-
-After running tests, verify deployed SHA matches:
-
-```bash
-kubectl describe pod -n e2e-test -l app=control-plane | grep "Image:"
-git rev-parse --short HEAD
-```
-
-They should match (or current SHA should have `-dirty` suffix if uncommitted changes).
