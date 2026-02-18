@@ -188,6 +188,19 @@ function generateHTML(title, bodyContent, options = {}) {
       display: block;
     }
 
+    .svg-container {
+      text-align: center;
+      margin: 1em 0;
+    }
+
+    .svg-container svg,
+    .embedded-svg {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: 0 auto;
+    }
+
     a.image-link {
       display: block;
       cursor: zoom-in;
@@ -617,16 +630,17 @@ async function convertFile(inputPath, options = {}) {
 
   // Generate HTML if requested
   if (format === 'html' || format === 'both') {
-    const html = generateHTML(baseName, bodyContent, { theme, forPdf: false });
     await fs.mkdir(htmlDir, { recursive: true });
+
+    // Embed SVGs inline and copy raster images to export folder
+    const embeddedBody = await embedImagesInline(bodyContent, inputDir, htmlDir);
+
+    const html = generateHTML(baseName, embeddedBody, { theme, forPdf: false });
     await fs.writeFile(htmlPath, html, 'utf-8');
     results.html = htmlPath;
 
-    // Copy referenced images to export folder
-    await copyImagesToExport(bodyContent, inputDir, htmlDir);
-
     if (verbose) {
-      console.error(`Created HTML: ${htmlPath}`);
+      console.error(`Created HTML: ${htmlPath} (SVGs embedded inline)`);
     }
   }
 

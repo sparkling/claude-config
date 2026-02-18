@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 const fs = require('fs').promises;
 const path = require('path');
-const { renderMermaidToSVG, saveSVG } = require('./render-mermaid');
+const { renderMermaidToSVG, saveSVG, renderMermaidToPNG, savePNG } = require('./render-mermaid');
 
 /**
  * Find already-rendered diagram patterns in the document.
@@ -229,6 +229,7 @@ ${diagramCode}
 async function processDocument(documentPath, options = {}) {
   const {
     theme = 'default',
+    format = 'png',
     outputDir = null,
     dryRun = false,
     verbose = false
@@ -264,8 +265,12 @@ async function processDocument(documentPath, options = {}) {
     // Resolve the image path relative to document directory
     const absoluteImagePath = path.resolve(docDir, diagram.imagePath);
 
+    // Detect format from existing file extension
+    const existingExt = path.extname(absoluteImagePath).toLowerCase();
+    const renderAsPng = existingExt === '.png' || (existingExt !== '.svg' && format === 'png');
+
     if (verbose) {
-      console.error(`  Re-rendering: ${diagram.name} -> ${diagram.imagePath}`);
+      console.error(`  Re-rendering: ${diagram.name} -> ${diagram.imagePath} (${renderAsPng ? 'png' : 'svg'})`);
     }
 
     if (!dryRun) {
@@ -273,9 +278,13 @@ async function processDocument(documentPath, options = {}) {
         // Ensure output directory exists
         await fs.mkdir(path.dirname(absoluteImagePath), { recursive: true });
 
-        // Render diagram
-        const svg = await renderMermaidToSVG(diagram.mermaidCode, { theme });
-        await saveSVG(svg, absoluteImagePath);
+        if (renderAsPng) {
+          const pngBuffer = await renderMermaidToPNG(diagram.mermaidCode, { theme });
+          await savePNG(pngBuffer, absoluteImagePath);
+        } else {
+          const svg = await renderMermaidToSVG(diagram.mermaidCode, { theme });
+          await saveSVG(svg, absoluteImagePath);
+        }
 
         processedDiagrams.push({
           name: diagram.name,
@@ -299,14 +308,16 @@ async function processDocument(documentPath, options = {}) {
   }
 
   // Process in reverse order to preserve indices when replacing
+  const ext = format === 'png' ? '.png' : '.svg';
+
   for (let i = standaloneBlocks.length - 1; i >= 0; i--) {
     const block = standaloneBlocks[i];
-    const svgFileName = `${block.name}.svg`;
-    const svgPath = path.join(diagramDir, svgFileName);
-    const relativeSvgPath = path.relative(docDir, svgPath);
+    const outFileName = `${block.name}${ext}`;
+    const outPath = path.join(diagramDir, outFileName);
+    const relativeOutPath = path.relative(docDir, outPath);
 
     if (verbose) {
-      console.error(`  Rendering new: ${block.name} -> ${relativeSvgPath}`);
+      console.error(`  Rendering new: ${block.name} -> ${relativeOutPath} (${format})`);
     }
 
     if (!dryRun) {
@@ -314,27 +325,32 @@ async function processDocument(documentPath, options = {}) {
         // Ensure output directory exists
         await fs.mkdir(diagramDir, { recursive: true });
 
-        // Render diagram
-        const svg = await renderMermaidToSVG(block.code, { theme });
-        await saveSVG(svg, svgPath);
+        // Render diagram in requested format
+        if (format === 'png') {
+          const pngBuffer = await renderMermaidToPNG(block.code, { theme });
+          await savePNG(pngBuffer, outPath);
+        } else {
+          const svg = await renderMermaidToSVG(block.code, { theme });
+          await saveSVG(svg, outPath);
+        }
 
         // Generate replacement syntax
-        const replacement = getImageSyntax(docExt, relativeSvgPath, block.name, block.code);
+        const replacement = getImageSyntax(docExt, relativeOutPath, block.name, block.code);
 
         // Replace in content
         newContent = newContent.slice(0, block.startIndex) + replacement + newContent.slice(block.endIndex);
 
         processedDiagrams.push({
           name: block.name,
-          svgPath: svgPath,
-          relativePath: relativeSvgPath,
+          outputPath: outPath,
+          relativePath: relativeOutPath,
           type: 'new'
         });
       } catch (err) {
         console.error(`  Error rendering ${block.name}: ${err.message}`);
       }
     } else {
-      console.log(`Would render new: ${block.name} -> ${relativeSvgPath}`);
+      console.log(`Would render new: ${block.name} -> ${relativeOutPath}`);
     }
   }
 
@@ -368,6 +384,7 @@ async function main() {
     console.log('Usage: process-document.js <document> [options]');
     console.log('');
     console.log('Options:');
+    console.log('  --format=<fmt>      Output format: png (default) or svg');
     console.log('  --theme=<theme>     Mermaid theme (default|forest|dark|neutral)');
     console.log('  --output=<dir>      Custom output directory for diagrams');
     console.log('  --dry-run           Show what would be done without making changes');
@@ -390,13 +407,21 @@ async function main() {
 
   const options = {
     theme: 'default',
+    format: 'png',
     outputDir: null,
     dryRun: false,
     verbose: false
   };
 
   for (const flag of flags) {
-    if (flag.startsWith('--theme=')) {
+    if (flag.startsWith('--format=')) {
+      const fmt = flag.split('=')[1];
+      if (!['png', 'svg'].includes(fmt)) {
+        console.error(`Invalid format: ${fmt}. Use: png or svg`);
+        process.exit(1);
+      }
+      options.format = fmt;
+    } else if (flag.startsWith('--theme=')) {
       options.theme = flag.split('=')[1];
     } else if (flag.startsWith('--output=')) {
       options.outputDir = flag.split('=')[1];

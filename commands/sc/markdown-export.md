@@ -26,6 +26,7 @@ Convert Markdown documents to standalone HTML and/or PDF files with full Mermaid
 - GitHub-flavored Markdown rendering
 - Syntax highlighting for code blocks (highlight.js)
 - Mermaid diagrams rendered with ELK layout support
+- **SVG images embedded inline** in HTML output for self-contained files
 - PDF generation via Puppeteer (renders Mermaid before printing)
 - Responsive, clean design
 - Self-contained output files

@@ -42,7 +42,7 @@ flowchart LR
 More content...
 ```
 
-### Step 2: Export Diagrams to SVG
+### Step 2: Export Diagrams to PNG
 
 After creating/editing a document with Mermaid blocks, run:
 
@@ -51,9 +51,12 @@ node ~/.claude/tools/mermaid-renderer/process-document.js <document-path> --verb
 ```
 
 **Options:**
+- `--format=<fmt>` - Output format: `png` (default) or `svg`
 - `--theme=<theme>` - Mermaid theme: `default`, `forest`, `dark`, `neutral`
 - `--verbose` - Show detailed progress
 - `--dry-run` - Preview without making changes
+
+**NOTE**: PNG is the default format for maximum compatibility with markdown previewers (VS Code, GitHub, Zed). Use `--format=svg` only when scalable vector output is specifically needed.
 
 ### Step 3: Result Structure
 
@@ -68,9 +71,9 @@ The tool will:
 document.md
 diagrams/
 └── document/
-    ├── diagram-1.svg
-    ├── diagram-2.svg
-    └── architecture-diagram.svg
+    ├── diagram-1.png
+    ├── diagram-2.png
+    └── architecture-diagram.png
 ```
 
 **Document transformation:**
@@ -258,13 +261,13 @@ The tool auto-sizes based on diagram content. For custom sizing, use the `<img>`
 ### Correct Way (Use This)
 
 ```markdown
-<img src="diagrams/document/diagram.svg" alt="Diagram Name" width="90%">
+<img src="diagrams/document/diagram.png" alt="Diagram Name" width="90%">
 ```
 
 Or with fixed pixel width:
 
 ```markdown
-<img src="diagrams/document/diagram.svg" alt="Diagram Name" width="600">
+<img src="diagrams/document/diagram.png" alt="Diagram Name" width="600">
 ```
 
 ### Wrong Way (Never Do This)
@@ -292,7 +295,7 @@ Or with fixed pixel width:
 When including the mermaid source in a details block:
 
 ```markdown
-<img src="diagrams/document/diagram.svg" alt="Architecture Overview" width="90%">
+<img src="diagrams/document/diagram.png" alt="Architecture Overview" width="90%">
 
 <details>
 <summary>Mermaid Source</summary>

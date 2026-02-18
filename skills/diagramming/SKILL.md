@@ -195,14 +195,16 @@ When generating diagrams, always:
 
 ### Document Structure (After Export)
 
-After exporting diagrams to PNG/SVG, the document should have:
-1. The rendered image (using `<img>` tag for size control)
+After exporting diagrams to PNG, the document should have:
+1. The rendered PNG image (using `<img>` tag for size control)
 2. A collapsible `<details>` block containing the mermaid source
 
 **CRITICAL**: For image sizing, MUST use `<img>` tag with width attribute. NEVER use CSS.
 
+**NOTE**: Diagrams export to **PNG by default** for maximum compatibility with markdown previews (VS Code, GitHub, Zed). Use `--format=svg` only when SVG is specifically needed.
+
 ```markdown
-<img src="diagrams/doc/diagram-name.svg" alt="Diagram Name" width="90%">
+<img src="diagrams/doc/diagram-name.png" alt="Diagram Name" width="90%">
 
 <details>
 <summary>Mermaid Source</summary>
@@ -373,16 +375,16 @@ node ~/.claude/tools/dot-renderer/process-document.js <document-path> --verbose
 document.md
 diagrams/
 └── document/
-    ├── diagram-1.svg
-    ├── architecture-overview.svg
-    └── data-flow.svg
+    ├── diagram-1.png
+    ├── architecture-overview.png
+    └── data-flow.png
 ```
 
 ### What Export Does
 
 1. **Extracts** all diagram code blocks from the document
-2. **Renders** each to SVG in `diagrams/{document-name}/`
-3. **Replaces** code blocks with image references: `![name](diagrams/doc/name.svg)`
+2. **Renders** each to PNG in `diagrams/{document-name}/`
+3. **Replaces** code blocks with image references: `![name](diagrams/doc/name.png)`
 4. **Preserves** original code in `<details>` block for future editing
 
 ### Post-Export Document Format
@@ -395,7 +397,7 @@ flowchart LR
 ` ``
 
 <!-- After (use <img> tag for sizing, NEVER CSS) -->
-<img src="diagrams/document/diagram-1.svg" alt="Diagram 1" width="70%">
+<img src="diagrams/document/diagram-1.png" alt="Diagram 1" width="70%">
 
 <details>
 <summary>Mermaid Source</summary>
