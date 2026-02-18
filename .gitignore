@@ -25,7 +25,14 @@ logs/
 *.pem
 *.key
 credentials.json
+.credentials.json
 secrets.json
+
+# IDE state
+ide/
+
+# Session state
+session-env/
 
 # Claude state files (managed by Claude Code, not config)
 statsig/
