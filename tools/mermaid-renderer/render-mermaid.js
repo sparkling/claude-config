@@ -114,11 +114,27 @@ ${diagramCode}
 }
 
 /**
+ * Sanitize SVG for XML compliance
+ * Mermaid generates HTML-style tags that are invalid in SVG/XML
+ */
+function sanitizeSVG(svgContent) {
+  return svgContent
+    // Convert HTML <br> to XML-compliant <br/>
+    .replace(/<br\s*>/gi, '<br/>')
+    // Convert other self-closing HTML tags
+    .replace(/<hr\s*>/gi, '<hr/>')
+    .replace(/<img([^>]*)>/gi, '<img$1/>')
+    // Ensure proper XML entities
+    .replace(/&(?!(amp|lt|gt|quot|apos|#\d+|#x[\da-fA-F]+);)/g, '&amp;');
+}
+
+/**
  * Save SVG to file
  */
 async function saveSVG(svgContent, outputPath) {
   await fs.mkdir(path.dirname(outputPath), { recursive: true });
-  await fs.writeFile(outputPath, svgContent, 'utf-8');
+  const sanitized = sanitizeSVG(svgContent);
+  await fs.writeFile(outputPath, sanitized, 'utf-8');
   return outputPath;
 }
 
@@ -132,9 +148,9 @@ async function renderMermaidToPNG(diagramCode, options = {}) {
   const {
     theme = 'default',
     backgroundColor = 'white',
-    width = 3200,
-    height = 2400,
-    scale = 4
+    width = 4800,
+    height = 3200,
+    scale = 6
   } = options;
 
   const browser = await puppeteer.launch({

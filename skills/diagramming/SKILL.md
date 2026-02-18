@@ -196,11 +196,13 @@ When generating diagrams, always:
 ### Document Structure (After Export)
 
 After exporting diagrams to PNG/SVG, the document should have:
-1. The rendered image
+1. The rendered image (using `<img>` tag for size control)
 2. A collapsible `<details>` block containing the mermaid source
 
+**CRITICAL**: For image sizing, MUST use `<img>` tag with width attribute. NEVER use CSS.
+
 ```markdown
-![diagram-name](diagrams/doc/diagram-name.png)
+<img src="diagrams/doc/diagram-name.svg" alt="Diagram Name" width="90%">
 
 <details>
 <summary>Mermaid Source</summary>
@@ -212,6 +214,15 @@ flowchart LR
 
 </details>
 ```
+
+**Size Guidelines:**
+| Diagram Type | Recommended Width |
+|--------------|-------------------|
+| Simple flowcharts | `width="70%"` |
+| Complex architectures | `width="90%"` |
+| Sequence diagrams | `width="80%"` |
+| State machines | `width="60%"` |
+| ER diagrams | `width="85%"` |
 
 This preserves the source for future editing while keeping the document clean.
 
@@ -383,8 +394,8 @@ flowchart LR
     A --> B
 ` ``
 
-<!-- After -->
-![diagram-1](diagrams/document/diagram-1.svg)
+<!-- After (use <img> tag for sizing, NEVER CSS) -->
+<img src="diagrams/document/diagram-1.svg" alt="Diagram 1" width="70%">
 
 <details>
 <summary>Mermaid Source</summary>
