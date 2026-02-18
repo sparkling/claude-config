@@ -1,19 +1,19 @@
 #!/usr/bin/env node
 const fs = require('fs').promises;
 const path = require('path');
-const { renderMermaidToPNG, savePNG } = require('./render-mermaid');
+const { renderMermaidToSVG, saveSVG } = require('./render-mermaid');
 
 /**
  * Find already-rendered diagram patterns in the document.
- * Pattern: ![name](path) followed by <details> containing mermaid source
+ * Supports both markdown ![name](path) and HTML <img> tags followed by <details> containing mermaid source
  *
  * Returns array of { imagePath, mermaidCode, name, startIndex, endIndex }
  */
 function findRenderedDiagrams(content) {
   const diagrams = [];
 
-  // Pattern matches:
-  // ![alt-text](diagrams/path/name.png)
+  // Pattern 1: Markdown image syntax
+  // ![alt-text](diagrams/path/name.svg)
   //
   // <details>
   // <summary>Mermaid Source</summary>
@@ -24,10 +24,10 @@ function findRenderedDiagrams(content) {
   //
   // </details>
 
-  const pattern = /!\[([^\]]*)\]\(([^)]+\.(?:png|svg))\)\s*\n\s*\n\s*<details>\s*\n\s*<summary>Mermaid Source<\/summary>\s*\n\s*\n\s*```mermaid\s*\n([\s\S]*?)```\s*\n\s*\n\s*<\/details>/gi;
+  const markdownPattern = /!\[([^\]]*)\]\(([^)]+\.(?:svg|png))\)\s*\n\s*\n\s*<details>\s*\n\s*<summary>Mermaid Source<\/summary>\s*\n\s*\n\s*```mermaid\s*\n([\s\S]*?)```\s*\n\s*\n\s*<\/details>/gi;
 
   let match;
-  while ((match = pattern.exec(content)) !== null) {
+  while ((match = markdownPattern.exec(content)) !== null) {
     const altText = match[1];
     const imagePath = match[2];
     const mermaidCode = match[3].trim();
@@ -42,9 +42,50 @@ function findRenderedDiagrams(content) {
       altText,
       fullMatch: match[0],
       startIndex: match.index,
-      endIndex: match.index + match[0].length
+      endIndex: match.index + match[0].length,
+      syntax: 'markdown'
     });
   }
+
+  // Pattern 2: HTML <img> tag syntax
+  // <img src="diagrams/path/name.svg" alt="alt-text" width="50%">
+  //
+  // <details>
+  // <summary>Mermaid Source</summary>
+  //
+  // ```mermaid
+  // ...code...
+  // ```
+  //
+  // </details>
+
+  const imgTagPattern = /<img\s+[^>]*src=["']([^"']+\.(?:svg|png))["'][^>]*>\s*\n\s*\n\s*<details>\s*\n\s*<summary>Mermaid Source<\/summary>\s*\n\s*\n\s*```mermaid\s*\n([\s\S]*?)```\s*\n\s*\n\s*<\/details>/gi;
+
+  while ((match = imgTagPattern.exec(content)) !== null) {
+    const imagePath = match[1];
+    const mermaidCode = match[2].trim();
+
+    // Try to extract alt text from the img tag
+    const altMatch = match[0].match(/alt=["']([^"']*)["']/i);
+    const altText = altMatch ? altMatch[1] : '';
+
+    // Extract name from image path or alt text
+    const name = path.basename(imagePath, path.extname(imagePath)) || altText || 'diagram';
+
+    diagrams.push({
+      name,
+      imagePath,
+      mermaidCode,
+      altText,
+      fullMatch: match[0],
+      startIndex: match.index,
+      endIndex: match.index + match[0].length,
+      syntax: 'html'
+    });
+  }
+
+  // Sort by startIndex to maintain document order
+  diagrams.sort((a, b) => a.startIndex - b.startIndex);
 
   return diagrams;
 }
@@ -233,8 +274,8 @@ async function processDocument(documentPath, options = {}) {
         await fs.mkdir(path.dirname(absoluteImagePath), { recursive: true });
 
         // Render diagram
-        const png = await renderMermaidToPNG(diagram.mermaidCode, { theme });
-        await savePNG(png, absoluteImagePath);
+        const svg = await renderMermaidToSVG(diagram.mermaidCode, { theme });
+        await saveSVG(svg, absoluteImagePath);
 
         processedDiagrams.push({
           name: diagram.name,
@@ -260,12 +301,12 @@ async function processDocument(documentPath, options = {}) {
   // Process in reverse order to preserve indices when replacing
   for (let i = standaloneBlocks.length - 1; i >= 0; i--) {
     const block = standaloneBlocks[i];
-    const pngFileName = `${block.name}.png`;
-    const pngPath = path.join(diagramDir, pngFileName);
-    const relativePngPath = path.relative(docDir, pngPath);
+    const svgFileName = `${block.name}.svg`;
+    const svgPath = path.join(diagramDir, svgFileName);
+    const relativeSvgPath = path.relative(docDir, svgPath);
 
     if (verbose) {
-      console.error(`  Rendering new: ${block.name} -> ${relativePngPath}`);
+      console.error(`  Rendering new: ${block.name} -> ${relativeSvgPath}`);
     }
 
     if (!dryRun) {
@@ -274,26 +315,26 @@ async function processDocument(documentPath, options = {}) {
         await fs.mkdir(diagramDir, { recursive: true });
 
         // Render diagram
-        const png = await renderMermaidToPNG(block.code, { theme });
-        await savePNG(png, pngPath);
+        const svg = await renderMermaidToSVG(block.code, { theme });
+        await saveSVG(svg, svgPath);
 
         // Generate replacement syntax
-        const replacement = getImageSyntax(docExt, relativePngPath, block.name, block.code);
+        const replacement = getImageSyntax(docExt, relativeSvgPath, block.name, block.code);
 
         // Replace in content
         newContent = newContent.slice(0, block.startIndex) + replacement + newContent.slice(block.endIndex);
 
         processedDiagrams.push({
           name: block.name,
-          pngPath: pngPath,
-          relativePath: relativePngPath,
+          svgPath: svgPath,
+          relativePath: relativeSvgPath,
           type: 'new'
         });
       } catch (err) {
         console.error(`  Error rendering ${block.name}: ${err.message}`);
       }
     } else {
-      console.log(`Would render new: ${block.name} -> ${relativePngPath}`);
+      console.log(`Would render new: ${block.name} -> ${relativeSvgPath}`);
     }
   }
 

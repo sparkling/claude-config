@@ -247,7 +247,63 @@ Puppeteer needs Chromium. Install globally: `npm install -g puppeteer`
 - Ensure valid ELK config if using `layout: elk`
 
 ### SVG too large/small
-The tool auto-sizes based on diagram content. For custom sizing, edit the generated SVG or use CSS in your document.
+The tool auto-sizes based on diagram content. For custom sizing, use the `<img>` tag with width/height attributes (see Image Sizing section below).
+
+---
+
+## Image Sizing
+
+**CRITICAL**: When resizing images in markdown, you MUST use the `<img>` tag with size attributes. NEVER use CSS.
+
+### Correct Way (Use This)
+
+```markdown
+<img src="diagrams/document/diagram.svg" alt="Diagram Name" width="90%">
+```
+
+Or with fixed pixel width:
+
+```markdown
+<img src="diagrams/document/diagram.svg" alt="Diagram Name" width="600">
+```
+
+### Wrong Way (Never Do This)
+
+```markdown
+<!-- WRONG: CSS styling -->
+![diagram](path.svg){: style="width: 90%" }
+
+<!-- WRONG: Kramdown attributes -->
+![diagram](path.svg){: width="90%" }
+```
+
+### Size Guidelines
+
+| Diagram Type | Recommended Width |
+|--------------|-------------------|
+| Simple flowcharts | `width="70%"` |
+| Complex architectures | `width="90%"` |
+| Sequence diagrams | `width="80%"` |
+| State machines | `width="60%"` |
+| ER diagrams | `width="85%"` |
+
+### With Details Block
+
+When including the mermaid source in a details block:
+
+```markdown
+<img src="diagrams/document/diagram.svg" alt="Architecture Overview" width="90%">
+
+<details>
+<summary>Mermaid Source</summary>
+
+` ``mermaid
+flowchart LR
+    A --> B
+` ``
+
+</details>
+```
 
 ### Diagrams not being re-rendered
 Ensure the document has the correct pattern: `![image](path)` followed by `<details>` with `<summary>Mermaid Source</summary>` and the mermaid code block. The pattern matching is strict to avoid false positives.

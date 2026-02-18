@@ -7,8 +7,9 @@ const { gfmHeadingId } = require('marked-gfm-heading-id');
 const { glob } = require('glob');
 
 /**
- * Custom renderer to handle mermaid code blocks
- * Instead of syntax highlighting, wraps them in <pre class="mermaid">
+ * Custom renderer to handle mermaid code blocks and images
+ * - Mermaid blocks: wrapped in <pre class="mermaid"> for client-side rendering
+ * - Images: rendered with width attribute for consistent sizing
  */
 function createMarkedInstance() {
   const marked = new Marked(
@@ -184,6 +185,18 @@ function generateHTML(title, bodyContent, options = {}) {
     img {
       max-width: 100%;
       height: auto;
+      display: block;
+    }
+
+    a.image-link {
+      display: block;
+      cursor: zoom-in;
+    }
+
+    a.image-link:hover img {
+      opacity: 0.9;
+      outline: 2px solid var(--color-link);
+      outline-offset: 2px;
     }
 
     ul, ol {
@@ -211,11 +224,6 @@ function generateHTML(title, bodyContent, options = {}) {
     summary {
       cursor: pointer;
       font-weight: 500;
-    }
-
-    .mermaid svg {
-      max-width: 100%;
-      height: auto;
     }
 
     @media print {
@@ -258,6 +266,227 @@ function generateHTML(title, bodyContent, options = {}) {
   </script>
 </body>
 </html>`;
+}
+
+/**
+ * Convert .md links to .html links in HTML content
+ * Handles both relative and absolute paths
+ */
+function convertMdLinksToHtml(htmlContent) {
+  // Match href attributes pointing to .md files
+  // Captures: href="path/to/file.md" or href='path/to/file.md'
+  // Preserves anchors: href="file.md#section" → href="file.html#section"
+  return htmlContent.replace(
+    /href=(["'])((?:\.\.?\/)?[^"']*?)\.md(#[^"']*)?(\1)/gi,
+    'href=$1$2.html$3$4'
+  );
+}
+
+/**
+ * Wrap images in clickable links that open full-size in new tab
+ * Transforms: <img src="path" alt="...">
+ * To: <a href="path" target="_blank" title="Click to open full size"><img src="path" alt="..."></a>
+ */
+function makeImagesClickable(htmlContent) {
+  // Match <img> tags and wrap in anchor
+  return htmlContent.replace(
+    /<img\s+([^>]*src=(["'])([^"']+)\2[^>]*)>/gi,
+    '<a href="$3" target="_blank" title="Click to open full size" class="image-link"><img $1></a>'
+  );
+}
+
+/**
+ * Remove <p> wrapper from standalone images
+ * Markdown converts ![alt](src) to <p><img ...></p>, which can cause rendering issues
+ * After makeImagesClickable, this becomes <p><a class="image-link"><img></a></p>
+ * This function unwraps such images so they render as block-level elements
+ */
+function unwrapStandaloneImages(htmlContent) {
+  // Match <p> tags that contain only whitespace and an image link
+  // Handles: <p><a class="image-link"...><img ...></a></p>
+  return htmlContent.replace(
+    /<p>\s*(<a[^>]*class="image-link"[^>]*><img[^>]*><\/a>)\s*<\/p>/gi,
+    '$1'
+  );
+}
+
+/**
+ * Extract all image paths from HTML content
+ */
+function extractImagePaths(htmlContent) {
+  const paths = [];
+  const regex = /src=(["'])([^"']+\.(png|svg|jpg|jpeg|gif|webp))\1/gi;
+  let match;
+  while ((match = regex.exec(htmlContent)) !== null) {
+    paths.push(match[2]);
+  }
+  return [...new Set(paths)]; // Remove duplicates
+}
+
+/**
+ * Read SVG file and prepare for inline embedding
+ * - Ensures xmlns is present
+ * - Removes XML declaration if present
+ * - Preserves width/height/viewBox attributes
+ */
+async function readSvgForInline(svgPath) {
+  let svgContent = await fs.readFile(svgPath, 'utf-8');
+
+  // Remove XML declaration if present
+  svgContent = svgContent.replace(/<\?xml[^?]*\?>\s*/gi, '');
+
+  // Remove DOCTYPE if present
+  svgContent = svgContent.replace(/<!DOCTYPE[^>]*>\s*/gi, '');
+
+  // Ensure xmlns is present
+  if (!svgContent.includes('xmlns=')) {
+    svgContent = svgContent.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
+  }
+
+  // Add class for styling
+  svgContent = svgContent.replace('<svg', '<svg class="embedded-svg"');
+
+  return svgContent.trim();
+}
+
+/**
+ * Convert raster image to base64 data URI
+ */
+async function imageToBase64DataUri(imagePath) {
+  const ext = path.extname(imagePath).toLowerCase().slice(1);
+  const mimeTypes = {
+    'png': 'image/png',
+    'jpg': 'image/jpeg',
+    'jpeg': 'image/jpeg',
+    'gif': 'image/gif',
+    'webp': 'image/webp'
+  };
+
+  const mimeType = mimeTypes[ext] || 'application/octet-stream';
+  const imageBuffer = await fs.readFile(imagePath);
+  const base64 = imageBuffer.toString('base64');
+
+  return `data:${mimeType};base64,${base64}`;
+}
+
+/**
+ * Extract width/height style from img tag attributes
+ */
+function extractImageDimensions(imgTag) {
+  const widthMatch = imgTag.match(/width\s*=\s*["']?(\d+(?:px|%)?)/i);
+  const heightMatch = imgTag.match(/height\s*=\s*["']?(\d+(?:px|%)?)/i);
+  const styleMatch = imgTag.match(/style\s*=\s*["']([^"']+)["']/i);
+
+  let style = '';
+  if (widthMatch) {
+    const width = widthMatch[1].includes('%') || widthMatch[1].includes('px')
+      ? widthMatch[1]
+      : `${widthMatch[1]}px`;
+    style += `max-width: ${width}; `;
+  }
+  if (heightMatch) {
+    const height = heightMatch[1].includes('%') || heightMatch[1].includes('px')
+      ? heightMatch[1]
+      : `${heightMatch[1]}px`;
+    style += `height: ${height}; `;
+  }
+  if (styleMatch) {
+    style += styleMatch[1];
+  }
+
+  return style.trim();
+}
+
+/**
+ * Embed images inline in HTML content
+ * - SVGs: embedded as inline <svg> elements
+ * - Raster images: converted to base64 data URIs
+ * Also copies images to export folder for the click-to-open links
+ */
+async function embedImagesInline(htmlContent, inputDir, htmlDir) {
+  const imagePaths = extractImagePaths(htmlContent);
+  let updatedContent = htmlContent;
+
+  for (const imgPath of imagePaths) {
+    // Resolve source path relative to input markdown
+    const sourcePath = path.resolve(inputDir, imgPath);
+
+    // Check if source exists
+    try {
+      await fs.access(sourcePath);
+    } catch {
+      console.error(`  Warning: Image not found: ${sourcePath}`);
+      continue;
+    }
+
+    const ext = path.extname(imgPath).toLowerCase();
+
+    if (ext === '.svg') {
+      // Read SVG content for inline embedding
+      const svgContent = await readSvgForInline(sourcePath);
+
+      // Find the img tag and its wrapper link, replace with inline SVG
+      // Pattern: <a href="..." class="image-link"><img src="path.svg" alt="..."></a>
+      const imgPattern = new RegExp(
+        `<a[^>]*href=["']${escapeRegExp(imgPath)}["'][^>]*class=["']image-link["'][^>]*>\\s*<img[^>]*src=["']${escapeRegExp(imgPath)}["'][^>]*>\\s*</a>`,
+        'gi'
+      );
+
+      // Also match when href and class order is reversed
+      const imgPattern2 = new RegExp(
+        `<a[^>]*class=["']image-link["'][^>]*href=["']${escapeRegExp(imgPath)}["'][^>]*>\\s*<img[^>]*src=["']${escapeRegExp(imgPath)}["'][^>]*>\\s*</a>`,
+        'gi'
+      );
+
+      // Create wrapper with collapsible source option
+      const inlineSvgHtml = `<div class="svg-container">${svgContent}</div>`;
+
+      updatedContent = updatedContent.replace(imgPattern, inlineSvgHtml);
+      updatedContent = updatedContent.replace(imgPattern2, inlineSvgHtml);
+
+      // Also handle standalone img tags (without wrapper)
+      const standaloneImgPattern = new RegExp(
+        `<img[^>]*src=["']${escapeRegExp(imgPath)}["'][^>]*>`,
+        'gi'
+      );
+      updatedContent = updatedContent.replace(standaloneImgPattern, inlineSvgHtml);
+
+    } else {
+      // Raster image: convert to base64 data URI
+      const dataUri = await imageToBase64DataUri(sourcePath);
+
+      // Replace src attribute with data URI
+      const srcPattern = new RegExp(`src=(["'])${escapeRegExp(imgPath)}\\1`, 'gi');
+      updatedContent = updatedContent.replace(srcPattern, `src=$1${dataUri}$1`);
+
+      // Also update href in wrapper links to use data URI
+      const hrefPattern = new RegExp(`href=(["'])${escapeRegExp(imgPath)}\\1`, 'gi');
+      updatedContent = updatedContent.replace(hrefPattern, `href=$1${dataUri}$1`);
+    }
+
+    // Still copy to export folder for reference/debugging
+    const destPath = path.join(htmlDir, imgPath);
+    await fs.mkdir(path.dirname(destPath), { recursive: true });
+    await fs.copyFile(sourcePath, destPath);
+  }
+
+  return updatedContent;
+}
+
+/**
+ * Escape special regex characters in a string
+ */
+function escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Legacy function - Copy images to export folder (for backward compatibility)
+ * @deprecated Use embedImagesInline instead
+ */
+async function copyImagesToExport(htmlContent, inputDir, htmlDir) {
+  // Now just calls embedImagesInline for inline embedding
+  return embedImagesInline(htmlContent, inputDir, htmlDir);
 }
 
 /**
@@ -369,7 +598,16 @@ async function convertFile(inputPath, options = {}) {
 
   // Convert to HTML
   const marked = createMarkedInstance();
-  const bodyContent = marked.parse(markdown);
+  let bodyContent = marked.parse(markdown);
+
+  // Convert .md links to .html links for proper navigation in exported HTML
+  bodyContent = convertMdLinksToHtml(bodyContent);
+
+  // Make images clickable to open full-size in new tab
+  bodyContent = makeImagesClickable(bodyContent);
+
+  // Remove <p> wrapper from standalone images (markdown ![](path) syntax)
+  bodyContent = unwrapStandaloneImages(bodyContent);
 
   const results = {
     input: absoluteInput,
@@ -383,6 +621,9 @@ async function convertFile(inputPath, options = {}) {
     await fs.mkdir(htmlDir, { recursive: true });
     await fs.writeFile(htmlPath, html, 'utf-8');
     results.html = htmlPath;
+
+    // Copy referenced images to export folder
+    await copyImagesToExport(bodyContent, inputDir, htmlDir);
 
     if (verbose) {
       console.error(`Created HTML: ${htmlPath}`);
