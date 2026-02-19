@@ -1,3 +1,44 @@
+# ─── Claude Code runtime state (never commit) ───
+history.jsonl
+.credentials.json
+stats-cache.json
+*.claude.json
+
+# Ephemeral directories (recreated each session)
+session-env/
+debug/
+file-history/
+shell-snapshots/
+todos/
+tasks/
+teams/
+plans/
+cache/
+paste-cache/
+ide/
+
+# Telemetry & analytics
+telemetry/
+statsig/
+
+# Internal project state (per-project data in global config)
+projects/
+
+# Plugins (local installs, marketplace caches)
+plugins/cache/
+plugins/blocklist.json
+plugins/config.json
+plugins/install-counts-cache.json
+plugins/installed_plugins.json
+plugins/known_marketplaces.json
+plugins/marketplaces/
+
+# Settings (managed by Claude Code, not user config)
+settings.json
+
+# Backups
+backups/
+
 # Dependencies
 node_modules/
 package-lock.json
@@ -10,45 +51,12 @@ Thumbs.db
 *.log
 logs/
 
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# Temporary files
+# Temp
 *.tmp
 *.temp
-.cache/
 
-# Credentials (if any)
-*.pem
-*.key
-credentials.json
-.credentials.json
-secrets.json
-
-# IDE state
-ide/
-
-# Session state
-session-env/
-
-# Claude state files (managed by Claude Code, not config)
-statsig/
-debug/
-file-history/
-history.jsonl
-shell-snapshots/
-todos/
-projects/
-lessons/
-cache/
-paste-cache/
-plans/
-tasks/
-teams/
-telemetry/
-stats-cache.json
+# Stale leftovers
 statusline-command.sh
 pligins.backup/
+downloads/
+lessons/
