@@ -535,3 +535,47 @@ flowchart LR
 3. Edit the diagram
 4. Re-run the export command
 5. New SVG replaces the old one, `<details>` block is updated
+
+---
+
+## HTML/PDF Export (After Diagram Rendering)
+
+After rendering diagrams to PNG, export the full document to HTML/PDF:
+
+```bash
+node ~/.claude/tools/markdown-export/convert.js <document-path> --verbose
+```
+
+### What the HTML Export Does
+
+1. **Embeds images inline** as base64 data URIs for self-contained HTML
+2. **Renders Mermaid blocks** client-side via Mermaid.js with ELK layout
+3. **Applies max-height** (`80vh`) to images so they fit on screen without scrolling
+4. **Adds pan/zoom viewer** — clicking any image opens an interactive overlay with:
+   - Mouse wheel zoom (centered on cursor)
+   - Click-drag pan
+   - Double-click to toggle fit/1:1
+   - Touch: pinch-zoom and drag
+   - Keyboard: `+`/`-` zoom, `0` fit, `1` actual size, `Esc` close
+   - Control bar with zoom buttons and percentage display
+5. **Generates PDF** via Puppeteer with rendered diagrams
+6. **Copies diagrams** to `export/html/diagrams/` for reference
+
+### HTML Export Features
+
+| Feature | Details |
+|---------|---------|
+| **Image embedding** | All PNGs/JPGs converted to base64 data URIs |
+| **Image max-height** | `80vh` — diagrams never require page scrolling |
+| **Image click** | Opens pan/zoom overlay (not blank tab) |
+| **SVG embedding** | SVGs inlined as `<svg>` elements |
+| **Mermaid** | Client-side rendering with ELK layout engine |
+| **Code highlighting** | highlight.js with GitHub theme |
+| **PDF** | Puppeteer-based, waits for Mermaid render |
+
+### HTML Renderer: Angle Bracket Escaping
+
+The mermaid renderer (`render-mermaid.js`) automatically escapes angle brackets in HTML `<pre>` context to prevent them being parsed as HTML tags. This handles:
+- `%% @prefix ex: <http://...>` comments — `<` escaped to `&lt;`
+- Preserves allowed HTML tags in labels: `<br/>`, `<b>`, `<i>`, `<u>`, `<em>`, `<strong>`, `<sub>`, `<sup>`
+- Without this, mermaid blocks with URL comments silently fail (rendering as 53,854-byte error PNGs)
