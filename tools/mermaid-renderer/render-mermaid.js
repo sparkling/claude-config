@@ -4,6 +4,25 @@ const fs = require('fs').promises;
 const path = require('path');
 
 /**
+ * Escape mermaid code for safe embedding in HTML <pre> tags.
+ * Angle brackets in comments (e.g. %% @prefix ex: <http://...>)
+ * are parsed as HTML tags, breaking the mermaid code.
+ * This escapes < in comments while preserving <br/> and <b>, <i> tags
+ * that mermaid legitimately uses in labels.
+ */
+function escapeForHtmlPre(code) {
+  return code.split('\n').map(line => {
+    // Lines starting with %% are mermaid comments — escape all < in them
+    if (/^\s*%%/.test(line)) {
+      return line.replace(/</g, '&lt;');
+    }
+    // For non-comment lines, escape < that are NOT part of known HTML tags
+    // Mermaid uses: <br/>, <br>, <b>, </b>, <i>, </i>, <u>, </u>
+    return line.replace(/<(?!\/?(?:br|b|i|u|em|strong|sub|sup)\s*\/?>)/gi, '&lt;');
+  }).join('\n');
+}
+
+/**
  * Renders a Mermaid diagram to SVG
  * @param {string} diagramCode - Mermaid diagram code
  * @param {object} options - Rendering options
@@ -26,6 +45,9 @@ async function renderMermaidToSVG(diagramCode, options = {}) {
     const page = await browser.newPage();
     await page.setViewport({ width, height });
 
+    // Escape HTML-breaking characters in mermaid code while preserving <br/> tags
+    const safeCode = escapeForHtmlPre(diagramCode);
+
     const html = `
       <!DOCTYPE html>
       <html>
@@ -47,7 +69,7 @@ async function renderMermaidToSVG(diagramCode, options = {}) {
       </head>
       <body>
         <pre class="mermaid">
-${diagramCode}
+${safeCode}
         </pre>
 
         <script type="module">
@@ -162,6 +184,9 @@ async function renderMermaidToPNG(diagramCode, options = {}) {
     const page = await browser.newPage();
     await page.setViewport({ width, height, deviceScaleFactor: scale });
 
+    // Escape HTML-breaking characters in mermaid code while preserving <br/> tags
+    const safeCode = escapeForHtmlPre(diagramCode);
+
     const html = `
       <!DOCTYPE html>
       <html>
@@ -183,7 +208,7 @@ async function renderMermaidToPNG(diagramCode, options = {}) {
       </head>
       <body>
         <pre class="mermaid">
-${diagramCode}
+${safeCode}
         </pre>
 
         <script type="module">

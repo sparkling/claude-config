@@ -1,6 +1,6 @@
 # Linked Data & RDF Visualization Guide
 
-> **SKILL QUICK REF**: `flowchart LR` + ELK | Subject→Predicate→Object | Namespace comments `%% @prefix` | Type-Instance labels `["<b>Type</b>\nInstance"]` | classDef: class `#E1BEE7` instance `#B3E5FC` property `#F8BBD9` literal `#FFF9C4`
+> **SKILL QUICK REF**: `flowchart LR` + ELK | Subject→Predicate→Object | Namespace comments `%% @prefix` | Type-Instance labels `["<b>Type</b><br/>Instance"]` | classDef: class `#E1BEE7` instance `#B3E5FC` property `#F8BBD9` literal `#FFF9C4`
 
 ## When to Use
 
@@ -104,13 +104,13 @@ config:
   layout: elk
 ---
 flowchart LR
-    classDef class fill:#E1BEE7,stroke:#6A1B9A,stroke-width:2px,color:#4A148C
+    classDef cls fill:#E1BEE7,stroke:#6A1B9A,stroke-width:2px,color:#4A148C
     classDef instance fill:#B3E5FC,stroke:#0277BD,stroke-width:2px,color:#01579B
     classDef property fill:#F8BBD9,stroke:#AD1457,stroke-width:2px,color:#880E4F
     classDef literal fill:#FFF9C4,stroke:#F57F17,stroke-width:2px,color:#E65100
     classDef namespace fill:#D7CCC8,stroke:#5D4037,stroke-width:2px,color:#3E2723
 
-    Person[Person]:::class
+    Person[Person]:::cls
     Jane[jane_doe]:::instance
     Name["Jane Doe"]:::literal
 
@@ -138,13 +138,13 @@ config:
   layout: elk
 ---
 flowchart TB
-    classDef class fill:#E1BEE7,stroke:#6A1B9A,stroke-width:2px,color:#4A148C
+    classDef cls fill:#E1BEE7,stroke:#6A1B9A,stroke-width:2px,color:#4A148C
 
-    Thing[owl:Thing]:::class
-    Agent[foaf:Agent]:::class
-    Person[foaf:Person]:::class
-    Org[foaf:Organization]:::class
-    Company[ex:Company]:::class
+    Thing[owl:Thing]:::cls
+    Agent[foaf:Agent]:::cls
+    Person[foaf:Person]:::cls
+    Org[foaf:Organization]:::cls
+    Company[ex:Company]:::cls
 
     Thing -->|rdfs:subClassOf| Agent
     Agent -->|rdfs:subClassOf| Person
@@ -156,11 +156,11 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-    classDef class fill:#E1BEE7,stroke:#6A1B9A,stroke-width:2px,color:#4A148C
+    classDef cls fill:#E1BEE7,stroke:#6A1B9A,stroke-width:2px,color:#4A148C
     classDef restriction fill:#FFCCBC,stroke:#E64A19,stroke-width:2px,color:#BF360C
 
-    Pizza[Pizza]:::class
-    Topping[Topping]:::class
+    Pizza[Pizza]:::cls
+    Topping[Topping]:::cls
     HasTopping[hasTopping<br/>some Topping]:::restriction
 
     Pizza -->|owl:equivalentClass| HasTopping
@@ -325,14 +325,14 @@ flowchart LR
     %% @prefix schema: <http://schema.org/>
     %% @prefix ex: <http://example.org/>
 
-    classDef class fill:#E1BEE7,stroke:#6A1B9A,stroke-width:2px,color:#4A148C
+    classDef cls fill:#E1BEE7,stroke:#6A1B9A,stroke-width:2px,color:#4A148C
     classDef instance fill:#B3E5FC,stroke:#0277BD,stroke-width:2px,color:#01579B
     classDef literal fill:#FFF9C4,stroke:#F57F17,stroke-width:2px,color:#E65100
 
     %% Classes
-    Organization[schema:Organization]:::class
-    Person[schema:Person]:::class
-    Place[schema:Place]:::class
+    Organization[schema:Organization]:::cls
+    Person[schema:Person]:::cls
+    Place[schema:Place]:::cls
 
     %% Instances
     Acme["<b>Organization</b><br/>Acme Corp"]:::instance

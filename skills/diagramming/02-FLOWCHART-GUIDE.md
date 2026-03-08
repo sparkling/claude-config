@@ -242,7 +242,7 @@ flowchart LR
     classDef company fill:#90EE90,stroke:#000,stroke-width:2px
     classDef person fill:#ADD8E6,stroke:#000,stroke-width:2px
     classDef literal fill:#FFFACD,stroke:#000,stroke-width:2px
-    classDef class fill:#DDA0DD,stroke:#000,stroke-width:2px
+    classDef cls fill:#DDA0DD,stroke:#000,stroke-width:2px
 
     SmallCo[SmallCo Inc]:::company
     Jane[Jane Doe]:::person
@@ -402,9 +402,9 @@ flowchart LR
     classDef property fill:#FFB6C1,stroke:#000,stroke-width:2px
 
     subgraph CompanyData["Company Knowledge Graph"]
-        SmallCo["<b>Company</b>\nSmallCo Inc"]:::company
-        Jane["<b>Person</b>\nJane Doe"]:::person
-        John["<b>Person</b>\nJohn Smith"]:::person
+        SmallCo["<b>Company</b><br/>SmallCo Inc"]:::company
+        Jane["<b>Person</b><br/>Jane Doe"]:::person
+        John["<b>Person</b><br/>John Smith"]:::person
         JoinDate1["2024-01-15"]:::literal
         JoinDate2["2023-06-20"]:::literal
     end

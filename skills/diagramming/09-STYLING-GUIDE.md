@@ -91,7 +91,7 @@ classDef neutral fill:#F5F5F5,stroke:#757575,stroke-width:2px,color:#424242
 
 ```
 %% Knowledge Graph Colors
-classDef class fill:#E1BEE7,stroke:#6A1B9A,stroke-width:2px,color:#4A148C
+classDef cls fill:#E1BEE7,stroke:#6A1B9A,stroke-width:2px,color:#4A148C
 classDef instance fill:#B3E5FC,stroke:#0277BD,stroke-width:2px,color:#01579B
 classDef property fill:#F8BBD9,stroke:#AD1457,stroke-width:2px,color:#880E4F
 classDef literal fill:#FFF9C4,stroke:#F57F17,stroke-width:2px,color:#E65100

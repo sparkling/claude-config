@@ -268,6 +268,122 @@ flowchart LR
 
 ---
 
+## MANDATORY: Line Breaks — ALWAYS `<br/>`, NEVER `\n`
+
+Mermaid does NOT interpret `\n` as a line break. It renders as the **literal characters** `\n` in the output. This applies everywhere: node labels, edge labels, subgraph titles, and any quoted string.
+
+**ALWAYS** use `<br/>`. **NEVER** use `\n`. No exceptions.
+
+```
+WRONG:  A["First line\nSecond line"]         → shows literal \n
+WRONG:  A -->|"line one\nline two"| B        → shows literal \n
+CORRECT: A["First line<br/>Second line"]      → actual line break
+CORRECT: A -->|"line one<br/>line two"| B     → actual line break
+```
+
+**Before writing ANY mermaid code**, mentally replace every `\n` with `<br/>`. After writing, search the block for `\n` — if found in any label or string, replace it.
+
+---
+
+## MANDATORY: Reserved Keywords — Never Use as classDef Names
+
+Mermaid reserves these keywords. Using them as `classDef` names causes **silent parse failures** (diagram renders as "Syntax error in text" with no useful message):
+
+| Reserved Word | What It Does | Use Instead |
+|---------------|-------------|-------------|
+| `class` | Applies styles to nodes | `cls`, `rdfClass`, `ontClass` |
+| `graph` | Declares diagram type | `graphNode`, `namedGraph` |
+| `subgraph` | Opens a group | `subGroup`, `cluster` |
+| `end` | Closes a group | `endNode`, `terminal` |
+| `default` | Default style | `defaultStyle`, `base` |
+| `direction` | Sets flow direction | `dir`, `flowDir` |
+| `style` | Inline styles | `styleNode`, `styled` |
+| `click` | Click events | `clickable`, `interactive` |
+| `linkStyle` | Edge styling | `edgeStyle`, `linkFmt` |
+
+```
+WRONG:  classDef class fill:#E1BEE7,stroke:#6A1B9A
+WRONG:  classDef graph fill:#FFF9C4,stroke:#F9A825
+CORRECT: classDef cls fill:#E1BEE7,stroke:#6A1B9A
+CORRECT: classDef namedGraph fill:#FFF9C4,stroke:#F9A825
+```
+
+---
+
+## Validation Gate (MANDATORY before export)
+
+After creating or modifying mermaid diagrams in a document, **ALWAYS validate** before rendering:
+
+```bash
+bash ~/.claude/tools/mermaid-renderer/validate-diagrams.sh <document-path>
+```
+
+This runs every mermaid block through the mermaid parser and reports OK/FAIL with error details. **Do not render or export until all blocks pass.**
+
+If a block fails:
+1. Read the error message — it shows the line number and unexpected token
+2. Common causes: reserved keyword as classDef name, unescaped special characters, malformed YAML frontmatter
+3. Fix and re-validate
+
+---
+
+## MANDATORY: Common Errors — Avoid These
+
+These are the most frequently encountered mermaid errors. Each causes silent rendering failure ("Syntax error in text"):
+
+### 1. Angle brackets in comments parsed as HTML
+
+When mermaid code is embedded in `<pre class="mermaid">` for rendering, angle brackets in comments like `%% @prefix ex: <http://example.org/>` are parsed as HTML tags, destroying the mermaid source before the parser sees it.
+
+**The renderer handles this automatically**, but be aware:
+- `<br/>`, `<b>`, `<i>` in labels are safe (explicitly preserved)
+- All other `<` characters in comments are escaped automatically
+- If rendering fails silently, check for unescaped `<` in comments
+
+### 2. `\n` in labels (renders as literal text)
+
+See the **MANDATORY: Line Breaks** section above.
+
+### 3. Reserved words as `classDef` names
+
+See the **MANDATORY: Reserved Keywords** section above.
+
+### 4. Unescaped HTML special characters in labels
+
+`<`, `>`, `&` in node labels are interpreted as HTML:
+```
+WRONG:  A["Latency <15min"]       → <15min parsed as HTML tag
+CORRECT: A["Latency &lt;15min"]   → renders correctly
+CORRECT: A["Latency under 15min"] → avoid the issue entirely
+```
+
+### 5. Unquoted labels with special characters
+
+Labels containing `(`, `)`, `[`, `]`, `{`, `}`, `#`, `&`, or `:` must be quoted:
+```
+WRONG:  A[Count: 42]       → colon breaks the parser
+CORRECT: A["Count: 42"]    → quoted label is safe
+```
+
+### 6. Missing diagram type declaration
+
+Every mermaid block must start with a diagram type (or YAML frontmatter followed by a diagram type):
+```
+WRONG:  A --> B             → no diagram type
+CORRECT: flowchart LR       → diagram type declared
+            A --> B
+```
+
+### 7. Subgraph `end` keyword conflicts
+
+The word `end` closes subgraphs. Never use it as a node ID:
+```
+WRONG:  end[End State]       → conflicts with subgraph end
+CORRECT: endState[End State]  → safe
+```
+
+---
+
 ## Quality Checklist
 
 Before returning any diagram:
@@ -276,9 +392,11 @@ Before returning any diagram:
 - [ ] ELK enabled if >10 nodes or complex relationships?
 - [ ] Semantic colors applied consistently?
 - [ ] All nodes labeled clearly (≤30 characters for readability)?
+- [ ] **Line breaks use `<br/>` not `\n`?** (search the block!)
+- [ ] **No reserved words as classDef names?** (`class`, `graph`, `end`, `default`, etc.)
 - [ ] Relationships have meaningful labels where needed?
 - [ ] Configuration block properly formatted?
-- [ ] No syntax errors (test mentally)?
+- [ ] No syntax errors — **run validation gate**?
 - [ ] Accessibility: `accTitle` and `accDescr` included?
 
 ---
