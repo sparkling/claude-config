@@ -163,7 +163,7 @@ config:
 | **Property** | `#F8BBD9` | `#AD1457` |
 | **Literal** | `#FFF9C4` | `#F57F17` |
 
-### classDef Template (Copy-Paste Ready)
+### classDef Template — Light (Copy-Paste Ready)
 
 ```
 classDef infra fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#0D47A1
@@ -177,6 +177,129 @@ classDef success fill:#C8E6C9,stroke:#2E7D32,stroke-width:2px,color:#1B5E20
 classDef warning fill:#FFF9C4,stroke:#F9A825,stroke-width:2px,color:#F57F17
 classDef error fill:#FFCDD2,stroke:#C62828,stroke-width:2px,color:#B71C1C
 ```
+
+### classDef Template — Dark (Copy-Paste Ready)
+
+```
+classDef infra fill:#0D2137,stroke:#42A5F5,stroke-width:2px,color:#90CAF9
+classDef service fill:#0D2818,stroke:#66BB6A,stroke-width:2px,color:#A5D6A7
+classDef data fill:#2E1500,stroke:#FFA726,stroke-width:2px,color:#FFCC80
+classDef user fill:#1A0A2E,stroke:#AB47BC,stroke-width:2px,color:#CE93D8
+classDef process fill:#01293D,stroke:#29B6F6,stroke-width:2px,color:#81D4FA
+classDef security fill:#002A22,stroke:#26A69A,stroke-width:2px,color:#80CBC4
+classDef external fill:#1A2027,stroke:#78909C,stroke-width:2px,color:#B0BEC5
+classDef success fill:#0D2818,stroke:#66BB6A,stroke-width:2px,color:#A5D6A7
+classDef warning fill:#2E2400,stroke:#FFEE58,stroke-width:2px,color:#FFF59D
+classDef error fill:#2A0A0A,stroke:#EF5350,stroke-width:2px,color:#EF9A9A
+```
+
+### Dark Knowledge Graph classDefs
+
+```
+classDef class fill:#1A0A2E,stroke:#AB47BC,stroke-width:2px,color:#CE93D8
+classDef instance fill:#01293D,stroke:#29B6F6,stroke-width:2px,color:#81D4FA
+classDef property fill:#2A0A1A,stroke:#EC407A,stroke-width:2px,color:#F48FB1
+classDef literal fill:#2E2400,stroke:#FFA726,stroke-width:2px,color:#FFCC80
+```
+
+---
+
+## Dark/Light Mode (MANDATORY for Web Diagrams)
+
+**ALWAYS provide both light and dark theme configurations** when generating Mermaid diagrams for web applications. The diagram must respond to the site's theme toggle.
+
+### Canonical themeVariables
+
+Defined in `~/.claude/skills/diagramming/theme-variables.json` — the single source of truth consumed by both the rendering tool and client-side code.
+
+### Mermaid themeVariables — Light
+
+```js
+{
+  primaryColor: '#E1BEE7', primaryTextColor: '#4A148C',
+  primaryBorderColor: '#6A1B9A', lineColor: '#37474F',
+  textColor: '#263238', background: '#ffffff',
+  mainBkg: '#f8f9fa', clusterBkg: '#f3f0ff',
+  clusterBorder: '#d4c5f9', edgeLabelBackground: '#ffffff'
+}
+```
+
+### Mermaid themeVariables — Dark (Council Session 162)
+
+```js
+{
+  primaryColor: '#1A0A2E', primaryTextColor: '#CE93D8',
+  primaryBorderColor: '#AB47BC', lineColor: '#B0BEC5',
+  textColor: '#B0BEC5', background: '#181b23',
+  mainBkg: '#181b23', clusterBkg: '#1a1530',
+  clusterBorder: '#3d2e6b', edgeLabelBackground: '#181b23'
+}
+```
+
+### Integration Pattern (Astro/HTML)
+
+When embedding Mermaid diagrams in a web page with dark/light mode:
+
+1. **Detect current theme** from `document.documentElement.getAttribute('data-theme')`
+2. **Store both palettes** as JS objects (LIGHT and DARK)
+3. **Initialize Mermaid** with the current theme's variables
+4. **Listen for theme changes** via `document.addEventListener('hm:theme-change', ...)`
+5. **Re-render on toggle**: restore original Mermaid source, re-initialize with new palette, re-run
+
+```js
+// Theme detection
+function isDark() {
+  return document.documentElement.getAttribute('data-theme') === 'dark';
+}
+
+// Re-render on theme change
+document.addEventListener('hm:theme-change', function() {
+  mermaid.initialize({
+    startOnLoad: false, securityLevel: 'loose', theme: 'base',
+    themeVariables: isDark() ? DARK : LIGHT,
+    flowchart: { htmlLabels: true, curve: 'basis' }
+  });
+  // Restore original source and re-run
+  mermaid.run({ querySelector: '.mermaid' });
+});
+```
+
+---
+
+## Navigation Controls (MANDATORY for Complex Diagrams)
+
+**ALWAYS add pan/zoom/fullscreen controls** to Mermaid diagrams with >10 nodes when embedding in web pages. These are essential for large ontology/architecture diagrams.
+
+### Required Controls
+
+| Control | Interaction | Implementation |
+|---------|-------------|----------------|
+| **Zoom in** | Button click | `scale += 0.35` (capped at 5x) |
+| **Zoom out** | Button click | `scale -= 0.35` (min 0.1x) |
+| **Scroll zoom** | Mouse wheel | Zoom toward pointer position |
+| **Pan** | Mouse drag | Translate canvas on drag |
+| **Pinch zoom** | Two-finger touch | Scale from pinch midpoint |
+| **Touch pan** | Single-finger touch | Translate canvas on drag |
+| **Fit to view** | Button click | Reset scale=1, pan=0,0 |
+| **Fullscreen** | Button click | Fixed overlay, ESC to exit |
+
+### Toolbar Layout
+
+Place a compact toolbar at **top-right** of the diagram container:
+
+```
+[+] [-] 100% [⤢] | [⛶]
+zoom  zoom  label  fit   fullscreen
+```
+
+### Key Implementation Notes
+
+- Wrap the `<pre class="mermaid">` in a `<div class="diagram-canvas">` with `transform-origin: 0 0`
+- Wrap that in a `<div class="diagram-viewport">` with `overflow: hidden; cursor: grab`
+- Apply transforms via `translate(panX, panY) scale(scale)` on the canvas
+- Store original Mermaid source before render (needed for theme re-render)
+- On mouse drag, check `e.target.closest('a')` to avoid panning when clicking Mermaid links
+- Fullscreen uses `position: fixed; inset: 0; z-index: 50`
 
 ---
 

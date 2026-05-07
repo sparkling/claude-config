@@ -99,6 +99,131 @@ classDef literal fill:#FFF9C4,stroke:#F57F17,stroke-width:2px,color:#E65100
 
 ---
 
+## Dark Cagle Palette (Council Sessions 162 + 163)
+
+Dark companion to the Cagle palette. Same hue families with inverted luminance: deep fills (below 900), medium strokes (300–400), light text (100–200). All combinations WCAG AA+ (4.5:1 minimum). CVD-audited: worst-case pair distance 29+ under protanopia, deuteranopia, and tritanopia simulation (Brettel/Vienot model).
+
+### Design Principles
+
+1. **Luminance inversion** — same hue, inverted lightness
+2. **Material Design levels** — fills: custom deep, strokes: 400, text: 200
+3. **Edge labels** — Blue-grey 200 (`#B0BEC5`) for legibility; label background matches diagram background
+4. **Cluster subtlety** — barely perceptible lift from background (~1.2:1)
+5. **No decorative additions** — same stroke-width, same shapes, only colours change
+
+### Dark Semantic Colours
+
+WCAG 2.2 audited (Council Session 163). All text/fill AA+ (4.5:1+), all stroke/fill AA+ (4.5:1+). CVD-safe: worst-case pair distance 29+ (was 8).
+
+| Semantic Type | Fill | Stroke | Text | Use Case |
+|---------------|------|--------|------|----------|
+| **Infrastructure** | `#0D2137` | `#42A5F5` | `#90CAF9` | Cloud, clusters, platforms |
+| **Service** | `#0D2818` | `#66BB6A` | `#A5D6A7` | APIs, microservices |
+| **Data** | `#2E1500` | `#FFA726` | `#FFCC80` | Databases, storage |
+| **User/Actor** | `#1A0A2E` | `#BA68C8` | `#E1BEE7` | People, roles |
+| **Process** | `#012830` | `#4DD0E1` | `#B2EBF2` | Workflows, actions |
+| **Security** | `#002A22` | `#4DB6AC` | `#B2DFDB` | Auth, encryption |
+| **External** | `#211A17` | `#D7CCC8` | `#EFEBE9` | Third-party systems |
+
+### Dark Status Colours
+
+| Status | Fill | Stroke | Text |
+|--------|------|--------|------|
+| **Success** | `#0D2818` | `#66BB6A` | `#A5D6A7` |
+| **Warning** | `#2E2400` | `#FFEE58` | `#FFF59D` |
+| **Error** | `#2A0A0A` | `#EF5350` | `#EF9A9A` |
+| **Info** | `#0D2137` | `#42A5F5` | `#90CAF9` |
+| **Neutral** | `#1E1E1E` | `#9E9E9E` | `#BDBDBD` |
+
+### Dark Knowledge Graph Colours
+
+| Entity Type | Fill | Stroke | Text |
+|-------------|------|--------|------|
+| **Class/Type** | `#1A0A2E` | `#BA68C8` | `#E1BEE7` |
+| **Instance** | `#012830` | `#4DD0E1` | `#B2EBF2` |
+| **Property** | `#2A0A1A` | `#EC407A` | `#F48FB1` |
+| **Literal** | `#2E2400` | `#FFA726` | `#FFCC80` |
+| **Namespace** | `#1A1410` | `#A1887F` | `#D7CCC8` |
+
+### Dark classDef Blocks (Copy-Paste Ready)
+
+#### Architecture (Dark)
+
+```
+%% Cagle Color System - Architecture (Dark) — WCAG 2.2 audited (Session 163)
+classDef infra fill:#0D2137,stroke:#42A5F5,stroke-width:2px,color:#90CAF9
+classDef service fill:#0D2818,stroke:#66BB6A,stroke-width:2px,color:#A5D6A7
+classDef data fill:#2E1500,stroke:#FFA726,stroke-width:2px,color:#FFCC80
+classDef user fill:#1A0A2E,stroke:#BA68C8,stroke-width:2px,color:#E1BEE7
+classDef process fill:#012830,stroke:#4DD0E1,stroke-width:2px,color:#B2EBF2
+classDef security fill:#002A22,stroke:#4DB6AC,stroke-width:2px,color:#B2DFDB
+classDef external fill:#211A17,stroke:#D7CCC8,stroke-width:2px,color:#EFEBE9
+```
+
+#### Status (Dark)
+
+```
+%% Status Colors (Dark)
+classDef success fill:#0D2818,stroke:#66BB6A,stroke-width:2px,color:#A5D6A7
+classDef warning fill:#2E2400,stroke:#FFEE58,stroke-width:2px,color:#FFF59D
+classDef error fill:#2A0A0A,stroke:#EF5350,stroke-width:2px,color:#EF9A9A
+classDef info fill:#0D2137,stroke:#42A5F5,stroke-width:2px,color:#90CAF9
+classDef neutral fill:#1E1E1E,stroke:#9E9E9E,stroke-width:2px,color:#BDBDBD
+```
+
+#### Knowledge Graphs (Dark)
+
+```
+%% Knowledge Graph Colors (Dark) — WCAG 2.2 audited (Session 163)
+classDef class fill:#1A0A2E,stroke:#BA68C8,stroke-width:2px,color:#E1BEE7
+classDef instance fill:#012830,stroke:#4DD0E1,stroke-width:2px,color:#B2EBF2
+classDef property fill:#2A0A1A,stroke:#EC407A,stroke-width:2px,color:#F48FB1
+classDef literal fill:#2E2400,stroke:#FFA726,stroke-width:2px,color:#FFCC80
+```
+
+### Dark Mermaid themeVariables
+
+```yaml
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "primaryColor": "#1A0A2E",
+    "primaryTextColor": "#E1BEE7",
+    "primaryBorderColor": "#BA68C8",
+    "secondaryColor": "#0D2818",
+    "tertiaryColor": "#2E1500",
+    "lineColor": "#B0BEC5",
+    "textColor": "#B0BEC5",
+    "background": "#181b23",
+    "mainBkg": "#181b23",
+    "clusterBkg": "#1a1530",
+    "clusterBorder": "#3d2e6b",
+    "edgeLabelBackground": "#181b23",
+    "fontFamily": "Inter, sans-serif",
+    "fontSize": "14px"
+  }
+}}%%
+```
+
+### Dark Hex Quick Reference
+
+```
+Infrastructure: #0D2137 / #42A5F5 / #90CAF9
+Service:        #0D2818 / #66BB6A / #A5D6A7
+Data:           #2E1500 / #FFA726 / #FFCC80
+User:           #1A0A2E / #BA68C8 / #E1BEE7
+Process:        #012830 / #4DD0E1 / #B2EBF2
+Security:       #002A22 / #4DB6AC / #B2DFDB
+External:       #211A17 / #D7CCC8 / #EFEBE9
+Success:        #0D2818 / #66BB6A / #A5D6A7
+Warning:        #2E2400 / #FFEE58 / #FFF59D
+Error:          #2A0A0A / #EF5350 / #EF9A9A
+Info:           #0D2137 / #42A5F5 / #90CAF9
+Neutral:        #1E1E1E / #9E9E9E / #BDBDBD
+```
+
+---
+
 ## Built-in Themes
 
 ### Available Themes
@@ -364,4 +489,8 @@ Neutral:        #F5F5F5 / #757575
 
 - Cagle, Kurt & Bellamy-Royds, Amelia. *SVG Colors, Patterns & Gradients*. O'Reilly Media.
 - [Mermaid Theming Documentation](https://mermaid.js.org/config/theming.html)
-- [WCAG 2.1 Contrast Guidelines](https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum.html)
+- [WCAG 2.2 Contrast Guidelines](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html)
+- [WCAG 2.2 Non-text Contrast](https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html)
+- [APCA Accessible Perceptual Contrast Algorithm](https://git.apcacontrast.com/) — W3C Silver draft, superior dark mode contrast model
+- Brettel, H., Viénot, F., & Mollon, J.D. (1997). Computerized simulation of color appearance for dichromats. *JOSA A*.
+- Council Session 163 — Dark palette WCAG accessibility audit (`docs/ontology/odr/council/session-163-dark-palette-wcag-accessibility.md`)

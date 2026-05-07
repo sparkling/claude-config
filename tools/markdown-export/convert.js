@@ -73,12 +73,13 @@ function generateHTML(title, bodyContent, options = {}) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escapeHtml(title)}</title>
 
-  <!-- Highlight.js for code syntax highlighting -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css">
+  <!-- Highlight.js stylesheets — light + dark, swapped by data-theme via disabled attribute -->
+  <link id="hljs-light" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css">
+  <link id="hljs-dark" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github-dark.min.css" disabled>
 
   <style>
     :root {
-      --max-width: 900px;
+      --max-width: 1600px;
       --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
       --font-mono: 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
       --color-text: #24292f;
@@ -86,7 +87,43 @@ function generateHTML(title, bodyContent, options = {}) {
       --color-border: #d0d7de;
       --color-link: #0969da;
       --color-code-bg: #f6f8fa;
+      --color-blockquote-text: #57606a;
+      --color-toggle-bg: #f6f8fa;
+      --color-toggle-border: #d0d7de;
+      --color-toggle-text: #24292f;
     }
+
+    [data-theme="dark"] {
+      --color-text: #e6edf3;
+      --color-bg: #0d1117;
+      --color-border: #30363d;
+      --color-link: #58a6ff;
+      --color-code-bg: #161b22;
+      --color-blockquote-text: #8b949e;
+      --color-toggle-bg: #161b22;
+      --color-toggle-border: #30363d;
+      --color-toggle-text: #e6edf3;
+    }
+
+    /* Theme toggle button — top-right, hidden in print */
+    .theme-toggle {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      z-index: 100;
+      background: var(--color-toggle-bg);
+      color: var(--color-toggle-text);
+      border: 1px solid var(--color-toggle-border);
+      border-radius: 999px;
+      padding: 0.5rem 0.9rem;
+      font-family: var(--font-sans);
+      font-size: 0.875rem;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    }
+    .theme-toggle:hover { opacity: 0.88; }
+    .theme-toggle .icon { margin-right: 0.35rem; }
 
     * {
       box-sizing: border-box;
@@ -162,7 +199,7 @@ function generateHTML(title, bodyContent, options = {}) {
       margin: 1em 0;
       padding: 0 1em;
       border-left: 4px solid var(--color-border);
-      color: #57606a;
+      color: var(--color-blockquote-text);
     }
 
     table {
@@ -198,6 +235,11 @@ function generateHTML(title, bodyContent, options = {}) {
       outline: 2px solid var(--color-link);
       outline-offset: 2px;
     }
+    a.image-link:hover .diagram-themed {
+      opacity: 0.9;
+      outline: 2px solid var(--color-link);
+      outline-offset: 2px;
+    }
 
     ul, ol {
       margin: 1em 0;
@@ -226,6 +268,23 @@ function generateHTML(title, bodyContent, options = {}) {
       font-weight: 500;
     }
 
+    /* Paired diagram wrapper: shows light by default, swaps to dark when data-theme=dark */
+    .diagram-themed {
+      text-align: center;
+    }
+    .diagram-themed .svg-light,
+    .diagram-themed .svg-dark {
+      max-width: 100%;
+    }
+    .diagram-themed .svg-light svg,
+    .diagram-themed .svg-dark svg {
+      max-width: 100%;
+      height: auto;
+    }
+    .diagram-themed .svg-dark { display: none; }
+    [data-theme="dark"] .diagram-themed .svg-light { display: none; }
+    [data-theme="dark"] .diagram-themed .svg-dark { display: block; }
+
     @media print {
       body {
         padding: 0;
@@ -237,10 +296,17 @@ function generateHTML(title, bodyContent, options = {}) {
         white-space: pre-wrap;
         word-wrap: break-word;
       }
+      .theme-toggle { display: none !important; }
+      /* Always print the light variant */
+      .diagram-themed .svg-dark { display: none !important; }
+      .diagram-themed .svg-light { display: block !important; }
     }
   </style>
 </head>
 <body>
+  <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle dark mode">
+    <span class="icon" aria-hidden="true">◐</span><span class="label">Dark</span>
+  </button>
   <div class="container">
     ${bodyContent}
   </div>
@@ -264,6 +330,44 @@ function generateHTML(title, bodyContent, options = {}) {
     });
     ${pdfReadyScript}
   </script>
+
+  <!-- Theme toggle: localStorage preference → OS prefers-color-scheme → light default. Swaps hljs stylesheets. -->
+  <script>
+    (function () {
+      const root = document.documentElement;
+      const toggle = document.getElementById('theme-toggle');
+      if (!toggle) return;
+      const label = toggle.querySelector('.label');
+      const icon = toggle.querySelector('.icon');
+      const hljsLight = document.getElementById('hljs-light');
+      const hljsDark = document.getElementById('hljs-dark');
+
+      const stored = localStorage.getItem('md-export-theme');
+      const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      apply(stored || (systemPrefersDark ? 'dark' : 'light'));
+
+      toggle.addEventListener('click', () => {
+        const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        apply(next);
+        localStorage.setItem('md-export-theme', next);
+      });
+
+      if (window.matchMedia && !stored) {
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+          if (!localStorage.getItem('md-export-theme')) apply(e.matches ? 'dark' : 'light');
+        });
+      }
+
+      function apply(theme) {
+        root.setAttribute('data-theme', theme);
+        const isDark = theme === 'dark';
+        if (label) label.textContent = isDark ? 'Light' : 'Dark';
+        if (icon) icon.textContent = isDark ? '\u263C' : '\u25D0';
+        if (hljsLight) hljsLight.disabled = isDark;
+        if (hljsDark) hljsDark.disabled = !isDark;
+      }
+    })();
+  </script>
 </body>
 </html>`;
 }
@@ -286,12 +390,16 @@ function convertMdLinksToHtml(htmlContent) {
  * Wrap images in clickable links that open full-size in new tab
  * Transforms: <img src="path" alt="...">
  * To: <a href="path" target="_blank" title="Click to open full size"><img src="path" alt="..."></a>
+ *
+ * Skips <img class="diagram-pair"> — those are replaced wholesale by embedPairedDiagrams below.
  */
 function makeImagesClickable(htmlContent) {
-  // Match <img> tags and wrap in anchor
   return htmlContent.replace(
     /<img\s+([^>]*src=(["'])([^"']+)\2[^>]*)>/gi,
-    '<a href="$3" target="_blank" title="Click to open full size" class="image-link"><img $1></a>'
+    (full, attrs, quote, src) => {
+      if (/class=["'][^"']*\bdiagram-pair\b/i.test(full)) return full;
+      return `<a href="${src}" target="_blank" title="Click to open full size" class="image-link"><img ${attrs}></a>`;
+    }
   );
 }
 
@@ -311,16 +419,16 @@ function unwrapStandaloneImages(htmlContent) {
 }
 
 /**
- * Extract all image paths from HTML content
+ * Extract all image paths from HTML content, including paired diagrams' data-dark-src.
  */
 function extractImagePaths(htmlContent) {
   const paths = [];
-  const regex = /src=(["'])([^"']+\.(png|svg|jpg|jpeg|gif|webp))\1/gi;
+  const srcRegex = /src=(["'])([^"']+\.(png|svg|jpg|jpeg|gif|webp))\1/gi;
+  const darkRegex = /data-dark-src=(["'])([^"']+\.(png|svg|jpg|jpeg|gif|webp))\1/gi;
   let match;
-  while ((match = regex.exec(htmlContent)) !== null) {
-    paths.push(match[2]);
-  }
-  return [...new Set(paths)]; // Remove duplicates
+  while ((match = srcRegex.exec(htmlContent)) !== null) paths.push(match[2]);
+  while ((match = darkRegex.exec(htmlContent)) !== null) paths.push(match[2]);
+  return [...new Set(paths)];
 }
 
 /**
@@ -395,6 +503,66 @@ function extractImageDimensions(imgTag) {
   }
 
   return style.trim();
+}
+
+/**
+ * Inline paired <img class="diagram-pair" src="...light.svg" data-dark-src="...dark.svg"> diagrams.
+ * Replaces each paired img with <div class="diagram-themed"> containing both inline SVGs so CSS
+ * driven by [data-theme] on the document root can show one or the other without re-fetching.
+ */
+async function embedPairedDiagrams(htmlContent, inputDir, htmlDir) {
+  const pairPattern = /(?:<p>\s*)?<img\s+[^>]*class=["'][^"']*\bdiagram-pair\b[^"']*["'][^>]*>(?:\s*<\/p>)?/gi;
+  const matches = [];
+  let m;
+  while ((m = pairPattern.exec(htmlContent)) !== null) matches.push({ raw: m[0], index: m.index });
+
+  if (matches.length === 0) return htmlContent;
+
+  let updated = htmlContent;
+  for (const { raw } of matches) {
+    const srcMatch = raw.match(/\bsrc=["']([^"']+)["']/i);
+    const darkMatch = raw.match(/\bdata-dark-src=["']([^"']+)["']/i);
+    const altMatch = raw.match(/\balt=["']([^"']*)["']/i);
+    if (!srcMatch || !darkMatch) continue;
+
+    const lightRel = srcMatch[1];
+    const darkRel = darkMatch[1];
+    const altText = altMatch ? altMatch[1] : '';
+    const lightAbs = path.resolve(inputDir, lightRel);
+    const darkAbs = path.resolve(inputDir, darkRel);
+
+    let lightSvg;
+    let darkSvg;
+    try {
+      [lightSvg, darkSvg] = await Promise.all([
+        readSvgForInline(lightAbs),
+        readSvgForInline(darkAbs)
+      ]);
+    } catch (err) {
+      console.error(`  Warning: paired diagram SVG missing for ${lightRel}/${darkRel}: ${err.message}`);
+      continue;
+    }
+
+    // Copy both files for fallback / external links
+    for (const rel of [lightRel, darkRel]) {
+      const dest = path.join(htmlDir, rel);
+      try {
+        await fs.mkdir(path.dirname(dest), { recursive: true });
+        await fs.copyFile(path.resolve(inputDir, rel), dest);
+      } catch (err) {
+        console.error(`  Warning: could not copy ${rel}: ${err.message}`);
+      }
+    }
+
+    const replacement = `<a href="${escapeHtml(lightRel)}" target="_blank" title="Click to open full size" class="image-link"><div class="diagram-themed" role="img" aria-label="${escapeHtml(altText)}">
+<div class="svg-light">${lightSvg}</div>
+<div class="svg-dark">${darkSvg}</div>
+</div></a>`;
+
+    updated = updated.replace(raw, replacement);
+  }
+
+  return updated;
 }
 
 /**
@@ -603,7 +771,11 @@ async function convertFile(inputPath, options = {}) {
   // Convert .md links to .html links for proper navigation in exported HTML
   bodyContent = convertMdLinksToHtml(bodyContent);
 
-  // Make images clickable to open full-size in new tab
+  // Inline paired diagrams (both light + dark SVGs) BEFORE the single-image pipeline
+  // so their <img class="diagram-pair"> is replaced with <div class="diagram-themed">
+  bodyContent = await embedPairedDiagrams(bodyContent, inputDir, htmlDir);
+
+  // Make images clickable to open full-size in new tab (skips .diagram-pair)
   bodyContent = makeImagesClickable(bodyContent);
 
   // Remove <p> wrapper from standalone images (markdown ![](path) syntax)

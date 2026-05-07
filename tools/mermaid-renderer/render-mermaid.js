@@ -12,6 +12,7 @@ const path = require('path');
 async function renderMermaidToSVG(diagramCode, options = {}) {
   const {
     theme = 'default',
+    themeVariables = null,
     backgroundColor = 'transparent',
     width = 1920,
     height = 1080
@@ -56,10 +57,7 @@ ${diagramCode}
 
           mermaid.registerLayoutLoaders(elkLayouts);
 
-          mermaid.initialize({
-            startOnLoad: true,
-            theme: '${theme}'
-          });
+          mermaid.initialize(${JSON.stringify({ startOnLoad: true, theme, ...(themeVariables ? { themeVariables } : {}) })});
 
           // Signal when rendering is complete
           window.mermaidReady = new Promise((resolve) => {
@@ -147,6 +145,7 @@ async function saveSVG(svgContent, outputPath) {
 async function renderMermaidToPNG(diagramCode, options = {}) {
   const {
     theme = 'default',
+    themeVariables = null,
     backgroundColor = 'white',
     width = 4800,
     height = 3200,
@@ -192,10 +191,7 @@ ${diagramCode}
 
           mermaid.registerLayoutLoaders(elkLayouts);
 
-          mermaid.initialize({
-            startOnLoad: true,
-            theme: '${theme}'
-          });
+          mermaid.initialize(${JSON.stringify({ startOnLoad: true, theme, ...(themeVariables ? { themeVariables } : {}) })});
 
           // Signal when rendering is complete
           window.mermaidReady = new Promise((resolve) => {

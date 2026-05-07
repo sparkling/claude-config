@@ -1,0 +1,26 @@
+{
+  "light": {
+    "primaryColor": "#E1BEE7",
+    "primaryTextColor": "#4A148C",
+    "primaryBorderColor": "#6A1B9A",
+    "lineColor": "#37474F",
+    "textColor": "#263238",
+    "background": "#ffffff",
+    "mainBkg": "#f8f9fa",
+    "clusterBkg": "#f3f0ff",
+    "clusterBorder": "#d4c5f9",
+    "edgeLabelBackground": "#ffffff"
+  },
+  "dark": {
+    "primaryColor": "#1A0A2E",
+    "primaryTextColor": "#CE93D8",
+    "primaryBorderColor": "#AB47BC",
+    "lineColor": "#B0BEC5",
+    "textColor": "#B0BEC5",
+    "background": "#181b23",
+    "mainBkg": "#181b23",
+    "clusterBkg": "#1a1530",
+    "clusterBorder": "#3d2e6b",
+    "edgeLabelBackground": "#181b23"
+  }
+}
