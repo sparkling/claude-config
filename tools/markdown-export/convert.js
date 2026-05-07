@@ -73,13 +73,12 @@ function generateHTML(title, bodyContent, options = {}) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escapeHtml(title)}</title>
 
-  <!-- Highlight.js stylesheets — light + dark, swapped by data-theme via disabled attribute -->
-  <link id="hljs-light" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css">
-  <link id="hljs-dark" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github-dark.min.css" disabled>
+  <!-- Highlight.js for code syntax highlighting -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css">
 
   <style>
     :root {
-      --max-width: 1600px;
+      --max-width: 900px;
       --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
       --font-mono: 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
       --color-text: #24292f;
@@ -87,43 +86,7 @@ function generateHTML(title, bodyContent, options = {}) {
       --color-border: #d0d7de;
       --color-link: #0969da;
       --color-code-bg: #f6f8fa;
-      --color-blockquote-text: #57606a;
-      --color-toggle-bg: #f6f8fa;
-      --color-toggle-border: #d0d7de;
-      --color-toggle-text: #24292f;
     }
-
-    [data-theme="dark"] {
-      --color-text: #e6edf3;
-      --color-bg: #0d1117;
-      --color-border: #30363d;
-      --color-link: #58a6ff;
-      --color-code-bg: #161b22;
-      --color-blockquote-text: #8b949e;
-      --color-toggle-bg: #161b22;
-      --color-toggle-border: #30363d;
-      --color-toggle-text: #e6edf3;
-    }
-
-    /* Theme toggle button — top-right, hidden in print */
-    .theme-toggle {
-      position: fixed;
-      top: 1rem;
-      right: 1rem;
-      z-index: 100;
-      background: var(--color-toggle-bg);
-      color: var(--color-toggle-text);
-      border: 1px solid var(--color-toggle-border);
-      border-radius: 999px;
-      padding: 0.5rem 0.9rem;
-      font-family: var(--font-sans);
-      font-size: 0.875rem;
-      cursor: pointer;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-    }
-    .theme-toggle:hover { opacity: 0.88; }
-    .theme-toggle .icon { margin-right: 0.35rem; }
 
     * {
       box-sizing: border-box;
@@ -199,7 +162,7 @@ function generateHTML(title, bodyContent, options = {}) {
       margin: 1em 0;
       padding: 0 1em;
       border-left: 4px solid var(--color-border);
-      color: var(--color-blockquote-text);
+      color: #57606a;
     }
 
     table {
@@ -221,8 +184,24 @@ function generateHTML(title, bodyContent, options = {}) {
 
     img {
       max-width: 100%;
+      max-height: 80vh;
       height: auto;
       display: block;
+      object-fit: contain;
+    }
+
+    .svg-container {
+      text-align: center;
+      margin: 1em 0;
+    }
+
+    .svg-container svg,
+    .embedded-svg {
+      max-width: 100%;
+      max-height: 80vh;
+      height: auto;
+      display: block;
+      margin: 0 auto;
     }
 
     a.image-link {
@@ -235,10 +214,107 @@ function generateHTML(title, bodyContent, options = {}) {
       outline: 2px solid var(--color-link);
       outline-offset: 2px;
     }
-    a.image-link:hover .diagram-themed {
-      opacity: 0.9;
-      outline: 2px solid var(--color-link);
-      outline-offset: 2px;
+
+    /* Pan/zoom viewer overlay */
+    .image-viewer {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      z-index: 9999;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .image-viewer.active {
+      display: block;
+    }
+
+    .image-viewer .viewer-canvas {
+      width: 100%;
+      height: 100%;
+      cursor: grab;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .image-viewer .viewer-canvas.dragging {
+      cursor: grabbing;
+    }
+
+    .image-viewer img {
+      position: absolute;
+      transform-origin: 0 0;
+      max-width: none;
+      max-height: none;
+    }
+
+    .image-viewer .viewer-controls {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      background: rgba(0,0,0,0.7);
+      border-radius: 8px;
+      padding: 8px 12px;
+      z-index: 10000;
+    }
+
+    .image-viewer .viewer-controls button {
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: #fff;
+      width: 36px;
+      height: 36px;
+      border-radius: 6px;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s;
+    }
+
+    .image-viewer .viewer-controls button:hover {
+      background: rgba(255,255,255,0.3);
+    }
+
+    .image-viewer .viewer-zoom-label {
+      color: rgba(255,255,255,0.8);
+      font-size: 13px;
+      line-height: 36px;
+      min-width: 50px;
+      text-align: center;
+      font-family: var(--font-mono);
+    }
+
+    .image-viewer .viewer-close {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      background: rgba(0,0,0,0.6);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: #fff;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      font-size: 22px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      transition: background 0.15s;
+    }
+
+    .image-viewer .viewer-close:hover {
+      background: rgba(255,255,255,0.2);
     }
 
     ul, ol {
@@ -268,23 +344,6 @@ function generateHTML(title, bodyContent, options = {}) {
       font-weight: 500;
     }
 
-    /* Paired diagram wrapper: shows light by default, swaps to dark when data-theme=dark */
-    .diagram-themed {
-      text-align: center;
-    }
-    .diagram-themed .svg-light,
-    .diagram-themed .svg-dark {
-      max-width: 100%;
-    }
-    .diagram-themed .svg-light svg,
-    .diagram-themed .svg-dark svg {
-      max-width: 100%;
-      height: auto;
-    }
-    .diagram-themed .svg-dark { display: none; }
-    [data-theme="dark"] .diagram-themed .svg-light { display: none; }
-    [data-theme="dark"] .diagram-themed .svg-dark { display: block; }
-
     @media print {
       body {
         padding: 0;
@@ -296,20 +355,184 @@ function generateHTML(title, bodyContent, options = {}) {
         white-space: pre-wrap;
         word-wrap: break-word;
       }
-      .theme-toggle { display: none !important; }
-      /* Always print the light variant */
-      .diagram-themed .svg-dark { display: none !important; }
-      .diagram-themed .svg-light { display: block !important; }
     }
   </style>
 </head>
 <body>
-  <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle dark mode">
-    <span class="icon" aria-hidden="true">◐</span><span class="label">Dark</span>
-  </button>
   <div class="container">
     ${bodyContent}
   </div>
+
+  <!-- Pan/zoom image viewer -->
+  <div class="image-viewer" id="imageViewer">
+    <button class="viewer-close" onclick="closeViewer()" title="Close (Esc)">&#215;</button>
+    <div class="viewer-canvas" id="viewerCanvas">
+      <img id="viewerImg" src="" alt="Full size image" draggable="false">
+    </div>
+    <div class="viewer-controls">
+      <button onclick="viewerZoom(-1)" title="Zoom out (-)">&#8722;</button>
+      <button onclick="viewerReset()" title="Fit to screen (0)">Fit</button>
+      <span class="viewer-zoom-label" id="viewerZoomLabel">100%</span>
+      <button onclick="viewerZoom(1)" title="Zoom in (+)">+</button>
+      <button onclick="viewerSetZoom(1)" title="Actual size (1)">1:1</button>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      var viewer = document.getElementById('imageViewer');
+      var canvas = document.getElementById('viewerCanvas');
+      var img = document.getElementById('viewerImg');
+      var label = document.getElementById('viewerZoomLabel');
+      var scale = 1, panX = 0, panY = 0;
+      var isDragging = false, startX = 0, startY = 0, startPanX = 0, startPanY = 0;
+      var natW = 0, natH = 0;
+
+      function updateTransform() {
+        img.style.transform = 'translate(' + panX + 'px,' + panY + 'px) scale(' + scale + ')';
+        label.textContent = Math.round(scale * 100) + '%';
+      }
+
+      window.openLightbox = function(src) {
+        img.src = src;
+        viewer.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        img.onload = function() {
+          natW = img.naturalWidth;
+          natH = img.naturalHeight;
+          viewerReset();
+        };
+        if (img.complete && img.naturalWidth) {
+          natW = img.naturalWidth;
+          natH = img.naturalHeight;
+          viewerReset();
+        }
+      };
+
+      window.closeViewer = function() {
+        viewer.classList.remove('active');
+        document.body.style.overflow = '';
+      };
+
+      window.viewerReset = function() {
+        var vw = canvas.clientWidth, vh = canvas.clientHeight;
+        var fitScale = Math.min(vw / natW, vh / natH, 1) * 0.95;
+        scale = fitScale;
+        panX = (vw - natW * scale) / 2;
+        panY = (vh - natH * scale) / 2;
+        updateTransform();
+      };
+
+      window.viewerZoom = function(dir) {
+        var cx = canvas.clientWidth / 2, cy = canvas.clientHeight / 2;
+        var factor = dir > 0 ? 1.25 : 0.8;
+        var newScale = Math.min(Math.max(scale * factor, 0.05), 20);
+        panX = cx - (cx - panX) * (newScale / scale);
+        panY = cy - (cy - panY) * (newScale / scale);
+        scale = newScale;
+        updateTransform();
+      };
+
+      window.viewerSetZoom = function(z) {
+        var cx = canvas.clientWidth / 2, cy = canvas.clientHeight / 2;
+        panX = cx - (cx - panX) * (z / scale);
+        panY = cy - (cy - panY) * (z / scale);
+        scale = z;
+        updateTransform();
+      };
+
+      // Mouse drag to pan
+      canvas.addEventListener('mousedown', function(e) {
+        if (e.button !== 0) return;
+        isDragging = true;
+        startX = e.clientX; startY = e.clientY;
+        startPanX = panX; startPanY = panY;
+        canvas.classList.add('dragging');
+        e.preventDefault();
+      });
+
+      window.addEventListener('mousemove', function(e) {
+        if (!isDragging) return;
+        panX = startPanX + (e.clientX - startX);
+        panY = startPanY + (e.clientY - startY);
+        updateTransform();
+      });
+
+      window.addEventListener('mouseup', function() {
+        isDragging = false;
+        canvas.classList.remove('dragging');
+      });
+
+      // Scroll wheel to zoom, centered on cursor
+      canvas.addEventListener('wheel', function(e) {
+        e.preventDefault();
+        var rect = canvas.getBoundingClientRect();
+        var mx = e.clientX - rect.left, my = e.clientY - rect.top;
+        var factor = e.deltaY < 0 ? 1.15 : 0.87;
+        var newScale = Math.min(Math.max(scale * factor, 0.05), 20);
+        panX = mx - (mx - panX) * (newScale / scale);
+        panY = my - (my - panY) * (newScale / scale);
+        scale = newScale;
+        updateTransform();
+      }, { passive: false });
+
+      // Touch: pinch-zoom and pan
+      var lastTouches = null;
+      canvas.addEventListener('touchstart', function(e) {
+        if (e.touches.length === 1) {
+          isDragging = true;
+          startX = e.touches[0].clientX; startY = e.touches[0].clientY;
+          startPanX = panX; startPanY = panY;
+        }
+        lastTouches = Array.from(e.touches);
+        e.preventDefault();
+      }, { passive: false });
+
+      canvas.addEventListener('touchmove', function(e) {
+        if (e.touches.length === 1 && isDragging) {
+          panX = startPanX + (e.touches[0].clientX - startX);
+          panY = startPanY + (e.touches[0].clientY - startY);
+          updateTransform();
+        } else if (e.touches.length === 2 && lastTouches && lastTouches.length === 2) {
+          var oldDist = Math.hypot(lastTouches[0].clientX - lastTouches[1].clientX, lastTouches[0].clientY - lastTouches[1].clientY);
+          var newDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+          var factor = newDist / oldDist;
+          var mx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+          var my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+          var rect = canvas.getBoundingClientRect();
+          mx -= rect.left; my -= rect.top;
+          var newScale = Math.min(Math.max(scale * factor, 0.05), 20);
+          panX = mx - (mx - panX) * (newScale / scale);
+          panY = my - (my - panY) * (newScale / scale);
+          scale = newScale;
+          updateTransform();
+          lastTouches = Array.from(e.touches);
+        }
+        e.preventDefault();
+      }, { passive: false });
+
+      canvas.addEventListener('touchend', function() {
+        isDragging = false;
+        lastTouches = null;
+      });
+
+      // Keyboard shortcuts
+      document.addEventListener('keydown', function(e) {
+        if (!viewer.classList.contains('active')) return;
+        if (e.key === 'Escape') closeViewer();
+        else if (e.key === '+' || e.key === '=') viewerZoom(1);
+        else if (e.key === '-') viewerZoom(-1);
+        else if (e.key === '0') viewerReset();
+        else if (e.key === '1') viewerSetZoom(1);
+      });
+
+      // Double-click toggles between fit and 1:1
+      canvas.addEventListener('dblclick', function() {
+        if (Math.abs(scale - 1) < 0.01) viewerReset();
+        else viewerSetZoom(1);
+      });
+    })();
+  </script>
 
   <!-- Mermaid with ELK layout support -->
   <script type="module">
@@ -330,44 +553,6 @@ function generateHTML(title, bodyContent, options = {}) {
     });
     ${pdfReadyScript}
   </script>
-
-  <!-- Theme toggle: localStorage preference → OS prefers-color-scheme → light default. Swaps hljs stylesheets. -->
-  <script>
-    (function () {
-      const root = document.documentElement;
-      const toggle = document.getElementById('theme-toggle');
-      if (!toggle) return;
-      const label = toggle.querySelector('.label');
-      const icon = toggle.querySelector('.icon');
-      const hljsLight = document.getElementById('hljs-light');
-      const hljsDark = document.getElementById('hljs-dark');
-
-      const stored = localStorage.getItem('md-export-theme');
-      const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      apply(stored || (systemPrefersDark ? 'dark' : 'light'));
-
-      toggle.addEventListener('click', () => {
-        const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-        apply(next);
-        localStorage.setItem('md-export-theme', next);
-      });
-
-      if (window.matchMedia && !stored) {
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-          if (!localStorage.getItem('md-export-theme')) apply(e.matches ? 'dark' : 'light');
-        });
-      }
-
-      function apply(theme) {
-        root.setAttribute('data-theme', theme);
-        const isDark = theme === 'dark';
-        if (label) label.textContent = isDark ? 'Light' : 'Dark';
-        if (icon) icon.textContent = isDark ? '\u263C' : '\u25D0';
-        if (hljsLight) hljsLight.disabled = isDark;
-        if (hljsDark) hljsDark.disabled = !isDark;
-      }
-    })();
-  </script>
 </body>
 </html>`;
 }
@@ -387,19 +572,15 @@ function convertMdLinksToHtml(htmlContent) {
 }
 
 /**
- * Wrap images in clickable links that open full-size in new tab
- * Transforms: <img src="path" alt="...">
- * To: <a href="path" target="_blank" title="Click to open full size"><img src="path" alt="..."></a>
- *
- * Skips <img class="diagram-pair"> — those are replaced wholesale by embedPairedDiagrams below.
+ * Wrap images in clickable links that open in a lightbox overlay.
+ * Uses onclick to display a full-size lightbox instead of opening a new tab,
+ * which avoids the blank-tab problem with base64 data URIs.
  */
 function makeImagesClickable(htmlContent) {
+  // Match <img> tags and wrap in a link that triggers the lightbox
   return htmlContent.replace(
     /<img\s+([^>]*src=(["'])([^"']+)\2[^>]*)>/gi,
-    (full, attrs, quote, src) => {
-      if (/class=["'][^"']*\bdiagram-pair\b/i.test(full)) return full;
-      return `<a href="${src}" target="_blank" title="Click to open full size" class="image-link"><img ${attrs}></a>`;
-    }
+    '<a href="javascript:void(0)" onclick="openLightbox(this.querySelector(\'img\').src)" title="Click to view full size" class="image-link"><img $1></a>'
   );
 }
 
@@ -419,16 +600,16 @@ function unwrapStandaloneImages(htmlContent) {
 }
 
 /**
- * Extract all image paths from HTML content, including paired diagrams' data-dark-src.
+ * Extract all image paths from HTML content
  */
 function extractImagePaths(htmlContent) {
   const paths = [];
-  const srcRegex = /src=(["'])([^"']+\.(png|svg|jpg|jpeg|gif|webp))\1/gi;
-  const darkRegex = /data-dark-src=(["'])([^"']+\.(png|svg|jpg|jpeg|gif|webp))\1/gi;
+  const regex = /src=(["'])([^"']+\.(png|svg|jpg|jpeg|gif|webp))\1/gi;
   let match;
-  while ((match = srcRegex.exec(htmlContent)) !== null) paths.push(match[2]);
-  while ((match = darkRegex.exec(htmlContent)) !== null) paths.push(match[2]);
-  return [...new Set(paths)];
+  while ((match = regex.exec(htmlContent)) !== null) {
+    paths.push(match[2]);
+  }
+  return [...new Set(paths)]; // Remove duplicates
 }
 
 /**
@@ -506,66 +687,6 @@ function extractImageDimensions(imgTag) {
 }
 
 /**
- * Inline paired <img class="diagram-pair" src="...light.svg" data-dark-src="...dark.svg"> diagrams.
- * Replaces each paired img with <div class="diagram-themed"> containing both inline SVGs so CSS
- * driven by [data-theme] on the document root can show one or the other without re-fetching.
- */
-async function embedPairedDiagrams(htmlContent, inputDir, htmlDir) {
-  const pairPattern = /(?:<p>\s*)?<img\s+[^>]*class=["'][^"']*\bdiagram-pair\b[^"']*["'][^>]*>(?:\s*<\/p>)?/gi;
-  const matches = [];
-  let m;
-  while ((m = pairPattern.exec(htmlContent)) !== null) matches.push({ raw: m[0], index: m.index });
-
-  if (matches.length === 0) return htmlContent;
-
-  let updated = htmlContent;
-  for (const { raw } of matches) {
-    const srcMatch = raw.match(/\bsrc=["']([^"']+)["']/i);
-    const darkMatch = raw.match(/\bdata-dark-src=["']([^"']+)["']/i);
-    const altMatch = raw.match(/\balt=["']([^"']*)["']/i);
-    if (!srcMatch || !darkMatch) continue;
-
-    const lightRel = srcMatch[1];
-    const darkRel = darkMatch[1];
-    const altText = altMatch ? altMatch[1] : '';
-    const lightAbs = path.resolve(inputDir, lightRel);
-    const darkAbs = path.resolve(inputDir, darkRel);
-
-    let lightSvg;
-    let darkSvg;
-    try {
-      [lightSvg, darkSvg] = await Promise.all([
-        readSvgForInline(lightAbs),
-        readSvgForInline(darkAbs)
-      ]);
-    } catch (err) {
-      console.error(`  Warning: paired diagram SVG missing for ${lightRel}/${darkRel}: ${err.message}`);
-      continue;
-    }
-
-    // Copy both files for fallback / external links
-    for (const rel of [lightRel, darkRel]) {
-      const dest = path.join(htmlDir, rel);
-      try {
-        await fs.mkdir(path.dirname(dest), { recursive: true });
-        await fs.copyFile(path.resolve(inputDir, rel), dest);
-      } catch (err) {
-        console.error(`  Warning: could not copy ${rel}: ${err.message}`);
-      }
-    }
-
-    const replacement = `<a href="${escapeHtml(lightRel)}" target="_blank" title="Click to open full size" class="image-link"><div class="diagram-themed" role="img" aria-label="${escapeHtml(altText)}">
-<div class="svg-light">${lightSvg}</div>
-<div class="svg-dark">${darkSvg}</div>
-</div></a>`;
-
-    updated = updated.replace(raw, replacement);
-  }
-
-  return updated;
-}
-
-/**
  * Embed images inline in HTML content
  * - SVGs: embedded as inline <svg> elements
  * - Raster images: converted to base64 data URIs
@@ -594,15 +715,15 @@ async function embedImagesInline(htmlContent, inputDir, htmlDir) {
       const svgContent = await readSvgForInline(sourcePath);
 
       // Find the img tag and its wrapper link, replace with inline SVG
-      // Pattern: <a href="..." class="image-link"><img src="path.svg" alt="..."></a>
+      // Pattern: <a ... class="image-link" ...><img src="path.svg" ...></a>
       const imgPattern = new RegExp(
-        `<a[^>]*href=["']${escapeRegExp(imgPath)}["'][^>]*class=["']image-link["'][^>]*>\\s*<img[^>]*src=["']${escapeRegExp(imgPath)}["'][^>]*>\\s*</a>`,
+        `<a[^>]*class=["']image-link["'][^>]*>\\s*<img[^>]*src=["']${escapeRegExp(imgPath)}["'][^>]*>\\s*</a>`,
         'gi'
       );
 
-      // Also match when href and class order is reversed
+      // Also match href-first ordering (legacy)
       const imgPattern2 = new RegExp(
-        `<a[^>]*class=["']image-link["'][^>]*href=["']${escapeRegExp(imgPath)}["'][^>]*>\\s*<img[^>]*src=["']${escapeRegExp(imgPath)}["'][^>]*>\\s*</a>`,
+        `<a[^>]*href=["'][^"']*["'][^>]*class=["']image-link["'][^>]*>\\s*<img[^>]*src=["']${escapeRegExp(imgPath)}["'][^>]*>\\s*</a>`,
         'gi'
       );
 
@@ -626,10 +747,6 @@ async function embedImagesInline(htmlContent, inputDir, htmlDir) {
       // Replace src attribute with data URI
       const srcPattern = new RegExp(`src=(["'])${escapeRegExp(imgPath)}\\1`, 'gi');
       updatedContent = updatedContent.replace(srcPattern, `src=$1${dataUri}$1`);
-
-      // Also update href in wrapper links to use data URI
-      const hrefPattern = new RegExp(`href=(["'])${escapeRegExp(imgPath)}\\1`, 'gi');
-      updatedContent = updatedContent.replace(hrefPattern, `href=$1${dataUri}$1`);
     }
 
     // Still copy to export folder for reference/debugging
@@ -736,6 +853,44 @@ async function generatePDF(htmlPath, pdfPath, options = {}) {
 }
 
 /**
+ * Copy diagrams directory from source to export/html so relative paths resolve
+ * for both HTML click-through links and PDF rendering
+ */
+async function copyDiagramsDir(inputDir, htmlDir, verbose = false) {
+  const diagramsSource = path.join(inputDir, 'diagrams');
+  try {
+    await fs.access(diagramsSource);
+  } catch {
+    return; // No diagrams directory, nothing to copy
+  }
+
+  async function copyRecursive(src, dest) {
+    const stat = await fs.stat(src);
+    if (stat.isDirectory()) {
+      await fs.mkdir(dest, { recursive: true });
+      const entries = await fs.readdir(src);
+      for (const entry of entries) {
+        await copyRecursive(path.join(src, entry), path.join(dest, entry));
+      }
+    } else {
+      // Only copy image files
+      const ext = path.extname(src).toLowerCase();
+      if (['.png', '.svg', '.jpg', '.jpeg', '.gif', '.webp'].includes(ext)) {
+        await fs.mkdir(path.dirname(dest), { recursive: true });
+        await fs.copyFile(src, dest);
+      }
+    }
+  }
+
+  const destDiagrams = path.join(htmlDir, 'diagrams');
+  await copyRecursive(diagramsSource, destDiagrams);
+
+  if (verbose) {
+    console.error(`  Copied diagrams/ to ${destDiagrams}`);
+  }
+}
+
+/**
  * Convert a markdown file to HTML and/or PDF
  */
 async function convertFile(inputPath, options = {}) {
@@ -771,11 +926,7 @@ async function convertFile(inputPath, options = {}) {
   // Convert .md links to .html links for proper navigation in exported HTML
   bodyContent = convertMdLinksToHtml(bodyContent);
 
-  // Inline paired diagrams (both light + dark SVGs) BEFORE the single-image pipeline
-  // so their <img class="diagram-pair"> is replaced with <div class="diagram-themed">
-  bodyContent = await embedPairedDiagrams(bodyContent, inputDir, htmlDir);
-
-  // Make images clickable to open full-size in new tab (skips .diagram-pair)
+  // Make images clickable to open full-size in new tab
   bodyContent = makeImagesClickable(bodyContent);
 
   // Remove <p> wrapper from standalone images (markdown ![](path) syntax)
@@ -787,55 +938,44 @@ async function convertFile(inputPath, options = {}) {
     pdf: null
   };
 
+  // Always embed images and copy diagrams to html export folder
+  // so both HTML and PDF can reference them
+  await fs.mkdir(htmlDir, { recursive: true });
+  const embeddedBody = await embedImagesInline(bodyContent, inputDir, htmlDir);
+
+  // Also copy the full diagrams directory structure to html export folder
+  // so relative image paths resolve correctly for PDF rendering
+  await copyDiagramsDir(inputDir, htmlDir, verbose);
+
   // Generate HTML if requested
   if (format === 'html' || format === 'both') {
-    const html = generateHTML(baseName, bodyContent, { theme, forPdf: false });
-    await fs.mkdir(htmlDir, { recursive: true });
+    const html = generateHTML(baseName, embeddedBody, { theme, forPdf: false });
     await fs.writeFile(htmlPath, html, 'utf-8');
     results.html = htmlPath;
 
-    // Copy referenced images to export folder
-    await copyImagesToExport(bodyContent, inputDir, htmlDir);
-
     if (verbose) {
-      console.error(`Created HTML: ${htmlPath}`);
+      console.error(`Created HTML: ${htmlPath} (images embedded inline)`);
     }
   }
 
   // Generate PDF if requested
   if (format === 'pdf' || format === 'both') {
-    // For PDF, we need to generate HTML first (temporarily if html not requested)
-    let tempHtmlPath = htmlPath;
-    let needsCleanup = false;
+    // Generate temporary HTML for PDF with embedded images + PDF-ready script
+    const pdfHtml = generateHTML(baseName, embeddedBody, { theme, forPdf: true });
+    const tempPdfHtmlPath = path.join(htmlDir, `${baseName}__pdf_temp.html`);
+    await fs.writeFile(tempPdfHtmlPath, pdfHtml, 'utf-8');
 
-    if (format === 'pdf') {
-      // Generate temporary HTML for PDF conversion
-      const html = generateHTML(baseName, bodyContent, { theme, forPdf: true });
-      await fs.mkdir(htmlDir, { recursive: true });
-      await fs.writeFile(htmlPath, html, 'utf-8');
-      needsCleanup = true;
-    } else {
-      // Regenerate HTML with PDF-ready script
-      const html = generateHTML(baseName, bodyContent, { theme, forPdf: true });
-      await fs.writeFile(htmlPath, html, 'utf-8');
-    }
-
-    // Generate PDF
+    // Generate PDF from the temp HTML
     await fs.mkdir(pdfDir, { recursive: true });
-    await generatePDF(htmlPath, pdfPath, { verbose });
+    await generatePDF(tempPdfHtmlPath, pdfPath, { verbose });
     results.pdf = pdfPath;
 
-    // If only PDF was requested, we can optionally clean up HTML
-    // But let's keep it for debugging purposes
-    if (format === 'pdf' && !needsCleanup) {
-      // Restore HTML without PDF script
-      const html = generateHTML(baseName, bodyContent, { theme, forPdf: false });
-      await fs.writeFile(htmlPath, html, 'utf-8');
-    }
+    // Clean up temp file
+    await fs.unlink(tempPdfHtmlPath).catch(() => {});
 
-    // If we want both, regenerate HTML without the PDF wait script
+    // Ensure final HTML (if requested) is the clean version without PDF script
     if (format === 'both') {
-      const html = generateHTML(baseName, bodyContent, { theme, forPdf: false });
+      const html = generateHTML(baseName, embeddedBody, { theme, forPdf: false });
       await fs.writeFile(htmlPath, html, 'utf-8');
     }
   }

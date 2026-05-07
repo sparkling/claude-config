@@ -26,6 +26,10 @@ Convert Markdown documents to standalone HTML and/or PDF files with full Mermaid
 - GitHub-flavored Markdown rendering
 - Syntax highlighting for code blocks (highlight.js)
 - Mermaid diagrams rendered with ELK layout support
+- **Images embedded inline** as base64 data URIs for self-contained files
+- **Image max-height** (`80vh`) — diagrams fit on screen without scrolling
+- **Pan/zoom viewer** — click any image to open interactive overlay (scroll-zoom, drag-pan, pinch on touch, keyboard shortcuts)
+- **Angle bracket escaping** — `<` in mermaid comments auto-escaped to prevent HTML parsing errors
 - PDF generation via Puppeteer (renders Mermaid before printing)
 - Responsive, clean design
 - Self-contained output files

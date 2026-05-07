@@ -163,7 +163,7 @@ config:
 | **Property** | `#F8BBD9` | `#AD1457` |
 | **Literal** | `#FFF9C4` | `#F57F17` |
 
-### classDef Template — Light (Copy-Paste Ready)
+### classDef Template (Copy-Paste Ready)
 
 ```
 classDef infra fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#0D47A1
@@ -177,129 +177,6 @@ classDef success fill:#C8E6C9,stroke:#2E7D32,stroke-width:2px,color:#1B5E20
 classDef warning fill:#FFF9C4,stroke:#F9A825,stroke-width:2px,color:#F57F17
 classDef error fill:#FFCDD2,stroke:#C62828,stroke-width:2px,color:#B71C1C
 ```
-
-### classDef Template — Dark (Copy-Paste Ready)
-
-```
-classDef infra fill:#0D2137,stroke:#42A5F5,stroke-width:2px,color:#90CAF9
-classDef service fill:#0D2818,stroke:#66BB6A,stroke-width:2px,color:#A5D6A7
-classDef data fill:#2E1500,stroke:#FFA726,stroke-width:2px,color:#FFCC80
-classDef user fill:#1A0A2E,stroke:#AB47BC,stroke-width:2px,color:#CE93D8
-classDef process fill:#01293D,stroke:#29B6F6,stroke-width:2px,color:#81D4FA
-classDef security fill:#002A22,stroke:#26A69A,stroke-width:2px,color:#80CBC4
-classDef external fill:#1A2027,stroke:#78909C,stroke-width:2px,color:#B0BEC5
-classDef success fill:#0D2818,stroke:#66BB6A,stroke-width:2px,color:#A5D6A7
-classDef warning fill:#2E2400,stroke:#FFEE58,stroke-width:2px,color:#FFF59D
-classDef error fill:#2A0A0A,stroke:#EF5350,stroke-width:2px,color:#EF9A9A
-```
-
-### Dark Knowledge Graph classDefs
-
-```
-classDef class fill:#1A0A2E,stroke:#AB47BC,stroke-width:2px,color:#CE93D8
-classDef instance fill:#01293D,stroke:#29B6F6,stroke-width:2px,color:#81D4FA
-classDef property fill:#2A0A1A,stroke:#EC407A,stroke-width:2px,color:#F48FB1
-classDef literal fill:#2E2400,stroke:#FFA726,stroke-width:2px,color:#FFCC80
-```
-
----
-
-## Dark/Light Mode (MANDATORY for Web Diagrams)
-
-**ALWAYS provide both light and dark theme configurations** when generating Mermaid diagrams for web applications. The diagram must respond to the site's theme toggle.
-
-### Canonical themeVariables
-
-Defined in `~/.claude/skills/diagramming/theme-variables.json` — the single source of truth consumed by both the rendering tool and client-side code.
-
-### Mermaid themeVariables — Light
-
-```js
-{
-  primaryColor: '#E1BEE7', primaryTextColor: '#4A148C',
-  primaryBorderColor: '#6A1B9A', lineColor: '#37474F',
-  textColor: '#263238', background: '#ffffff',
-  mainBkg: '#f8f9fa', clusterBkg: '#f3f0ff',
-  clusterBorder: '#d4c5f9', edgeLabelBackground: '#ffffff'
-}
-```
-
-### Mermaid themeVariables — Dark (Council Session 162)
-
-```js
-{
-  primaryColor: '#1A0A2E', primaryTextColor: '#CE93D8',
-  primaryBorderColor: '#AB47BC', lineColor: '#B0BEC5',
-  textColor: '#B0BEC5', background: '#181b23',
-  mainBkg: '#181b23', clusterBkg: '#1a1530',
-  clusterBorder: '#3d2e6b', edgeLabelBackground: '#181b23'
-}
-```
-
-### Integration Pattern (Astro/HTML)
-
-When embedding Mermaid diagrams in a web page with dark/light mode:
-
-1. **Detect current theme** from `document.documentElement.getAttribute('data-theme')`
-2. **Store both palettes** as JS objects (LIGHT and DARK)
-3. **Initialize Mermaid** with the current theme's variables
-4. **Listen for theme changes** via `document.addEventListener('hm:theme-change', ...)`
-5. **Re-render on toggle**: restore original Mermaid source, re-initialize with new palette, re-run
-
-```js
-// Theme detection
-function isDark() {
-  return document.documentElement.getAttribute('data-theme') === 'dark';
-}
-
-// Re-render on theme change
-document.addEventListener('hm:theme-change', function() {
-  mermaid.initialize({
-    startOnLoad: false, securityLevel: 'loose', theme: 'base',
-    themeVariables: isDark() ? DARK : LIGHT,
-    flowchart: { htmlLabels: true, curve: 'basis' }
-  });
-  // Restore original source and re-run
-  mermaid.run({ querySelector: '.mermaid' });
-});
-```
-
----
-
-## Navigation Controls (MANDATORY for Complex Diagrams)
-
-**ALWAYS add pan/zoom/fullscreen controls** to Mermaid diagrams with >10 nodes when embedding in web pages. These are essential for large ontology/architecture diagrams.
-
-### Required Controls
-
-| Control | Interaction | Implementation |
-|---------|-------------|----------------|
-| **Zoom in** | Button click | `scale += 0.35` (capped at 5x) |
-| **Zoom out** | Button click | `scale -= 0.35` (min 0.1x) |
-| **Scroll zoom** | Mouse wheel | Zoom toward pointer position |
-| **Pan** | Mouse drag | Translate canvas on drag |
-| **Pinch zoom** | Two-finger touch | Scale from pinch midpoint |
-| **Touch pan** | Single-finger touch | Translate canvas on drag |
-| **Fit to view** | Button click | Reset scale=1, pan=0,0 |
-| **Fullscreen** | Button click | Fixed overlay, ESC to exit |
-
-### Toolbar Layout
-
-Place a compact toolbar at **top-right** of the diagram container:
-
-```
-[+] [-] 100% [⤢] | [⛶]
-zoom  zoom  label  fit   fullscreen
-```
-
-### Key Implementation Notes
-
-- Wrap the `<pre class="mermaid">` in a `<div class="diagram-canvas">` with `transform-origin: 0 0`
-- Wrap that in a `<div class="diagram-viewport">` with `overflow: hidden; cursor: grab`
-- Apply transforms via `translate(panX, panY) scale(scale)` on the canvas
-- Store original Mermaid source before render (needed for theme re-render)
-- On mouse drag, check `e.target.closest('a')` to avoid panning when clicking Mermaid links
-- Fullscreen uses `position: fixed; inset: 0; z-index: 50`
 
 ---
 
@@ -318,14 +195,16 @@ When generating diagrams, always:
 
 ### Document Structure (After Export)
 
-After exporting diagrams to PNG/SVG, the document should have:
-1. The rendered image (using `<img>` tag for size control)
+After exporting diagrams to PNG, the document should have:
+1. The rendered PNG image (using `<img>` tag for size control)
 2. A collapsible `<details>` block containing the mermaid source
 
 **CRITICAL**: For image sizing, MUST use `<img>` tag with width attribute. NEVER use CSS.
 
+**NOTE**: Diagrams export to **PNG by default** for maximum compatibility with markdown previews (VS Code, GitHub, Zed). Use `--format=svg` only when SVG is specifically needed.
+
 ```markdown
-<img src="diagrams/doc/diagram-name.svg" alt="Diagram Name" width="90%">
+<img src="diagrams/doc/diagram-name.png" alt="Diagram Name" width="90%">
 
 <details>
 <summary>Mermaid Source</summary>
@@ -389,6 +268,122 @@ flowchart LR
 
 ---
 
+## MANDATORY: Line Breaks — ALWAYS `<br/>`, NEVER `\n`
+
+Mermaid does NOT interpret `\n` as a line break. It renders as the **literal characters** `\n` in the output. This applies everywhere: node labels, edge labels, subgraph titles, and any quoted string.
+
+**ALWAYS** use `<br/>`. **NEVER** use `\n`. No exceptions.
+
+```
+WRONG:  A["First line\nSecond line"]         → shows literal \n
+WRONG:  A -->|"line one\nline two"| B        → shows literal \n
+CORRECT: A["First line<br/>Second line"]      → actual line break
+CORRECT: A -->|"line one<br/>line two"| B     → actual line break
+```
+
+**Before writing ANY mermaid code**, mentally replace every `\n` with `<br/>`. After writing, search the block for `\n` — if found in any label or string, replace it.
+
+---
+
+## MANDATORY: Reserved Keywords — Never Use as classDef Names
+
+Mermaid reserves these keywords. Using them as `classDef` names causes **silent parse failures** (diagram renders as "Syntax error in text" with no useful message):
+
+| Reserved Word | What It Does | Use Instead |
+|---------------|-------------|-------------|
+| `class` | Applies styles to nodes | `cls`, `rdfClass`, `ontClass` |
+| `graph` | Declares diagram type | `graphNode`, `namedGraph` |
+| `subgraph` | Opens a group | `subGroup`, `cluster` |
+| `end` | Closes a group | `endNode`, `terminal` |
+| `default` | Default style | `defaultStyle`, `base` |
+| `direction` | Sets flow direction | `dir`, `flowDir` |
+| `style` | Inline styles | `styleNode`, `styled` |
+| `click` | Click events | `clickable`, `interactive` |
+| `linkStyle` | Edge styling | `edgeStyle`, `linkFmt` |
+
+```
+WRONG:  classDef class fill:#E1BEE7,stroke:#6A1B9A
+WRONG:  classDef graph fill:#FFF9C4,stroke:#F9A825
+CORRECT: classDef cls fill:#E1BEE7,stroke:#6A1B9A
+CORRECT: classDef namedGraph fill:#FFF9C4,stroke:#F9A825
+```
+
+---
+
+## Validation Gate (MANDATORY before export)
+
+After creating or modifying mermaid diagrams in a document, **ALWAYS validate** before rendering:
+
+```bash
+bash ~/.claude/tools/mermaid-renderer/validate-diagrams.sh <document-path>
+```
+
+This runs every mermaid block through the mermaid parser and reports OK/FAIL with error details. **Do not render or export until all blocks pass.**
+
+If a block fails:
+1. Read the error message — it shows the line number and unexpected token
+2. Common causes: reserved keyword as classDef name, unescaped special characters, malformed YAML frontmatter
+3. Fix and re-validate
+
+---
+
+## MANDATORY: Common Errors — Avoid These
+
+These are the most frequently encountered mermaid errors. Each causes silent rendering failure ("Syntax error in text"):
+
+### 1. Angle brackets in comments parsed as HTML
+
+When mermaid code is embedded in `<pre class="mermaid">` for rendering, angle brackets in comments like `%% @prefix ex: <http://example.org/>` are parsed as HTML tags, destroying the mermaid source before the parser sees it.
+
+**The renderer handles this automatically**, but be aware:
+- `<br/>`, `<b>`, `<i>` in labels are safe (explicitly preserved)
+- All other `<` characters in comments are escaped automatically
+- If rendering fails silently, check for unescaped `<` in comments
+
+### 2. `\n` in labels (renders as literal text)
+
+See the **MANDATORY: Line Breaks** section above.
+
+### 3. Reserved words as `classDef` names
+
+See the **MANDATORY: Reserved Keywords** section above.
+
+### 4. Unescaped HTML special characters in labels
+
+`<`, `>`, `&` in node labels are interpreted as HTML:
+```
+WRONG:  A["Latency <15min"]       → <15min parsed as HTML tag
+CORRECT: A["Latency &lt;15min"]   → renders correctly
+CORRECT: A["Latency under 15min"] → avoid the issue entirely
+```
+
+### 5. Unquoted labels with special characters
+
+Labels containing `(`, `)`, `[`, `]`, `{`, `}`, `#`, `&`, or `:` must be quoted:
+```
+WRONG:  A[Count: 42]       → colon breaks the parser
+CORRECT: A["Count: 42"]    → quoted label is safe
+```
+
+### 6. Missing diagram type declaration
+
+Every mermaid block must start with a diagram type (or YAML frontmatter followed by a diagram type):
+```
+WRONG:  A --> B             → no diagram type
+CORRECT: flowchart LR       → diagram type declared
+            A --> B
+```
+
+### 7. Subgraph `end` keyword conflicts
+
+The word `end` closes subgraphs. Never use it as a node ID:
+```
+WRONG:  end[End State]       → conflicts with subgraph end
+CORRECT: endState[End State]  → safe
+```
+
+---
+
 ## Quality Checklist
 
 Before returning any diagram:
@@ -397,9 +392,11 @@ Before returning any diagram:
 - [ ] ELK enabled if >10 nodes or complex relationships?
 - [ ] Semantic colors applied consistently?
 - [ ] All nodes labeled clearly (≤30 characters for readability)?
+- [ ] **Line breaks use `<br/>` not `\n`?** (search the block!)
+- [ ] **No reserved words as classDef names?** (`class`, `graph`, `end`, `default`, etc.)
 - [ ] Relationships have meaningful labels where needed?
 - [ ] Configuration block properly formatted?
-- [ ] No syntax errors (test mentally)?
+- [ ] No syntax errors — **run validation gate**?
 - [ ] Accessibility: `accTitle` and `accDescr` included?
 
 ---
@@ -496,16 +493,16 @@ node ~/.claude/tools/dot-renderer/process-document.js <document-path> --verbose
 document.md
 diagrams/
 └── document/
-    ├── diagram-1.svg
-    ├── architecture-overview.svg
-    └── data-flow.svg
+    ├── diagram-1.png
+    ├── architecture-overview.png
+    └── data-flow.png
 ```
 
 ### What Export Does
 
 1. **Extracts** all diagram code blocks from the document
-2. **Renders** each to SVG in `diagrams/{document-name}/`
-3. **Replaces** code blocks with image references: `![name](diagrams/doc/name.svg)`
+2. **Renders** each to PNG in `diagrams/{document-name}/`
+3. **Replaces** code blocks with image references: `![name](diagrams/doc/name.png)`
 4. **Preserves** original code in `<details>` block for future editing
 
 ### Post-Export Document Format
@@ -518,7 +515,7 @@ flowchart LR
 ` ``
 
 <!-- After (use <img> tag for sizing, NEVER CSS) -->
-<img src="diagrams/document/diagram-1.svg" alt="Diagram 1" width="70%">
+<img src="diagrams/document/diagram-1.png" alt="Diagram 1" width="70%">
 
 <details>
 <summary>Mermaid Source</summary>
@@ -538,3 +535,47 @@ flowchart LR
 3. Edit the diagram
 4. Re-run the export command
 5. New SVG replaces the old one, `<details>` block is updated
+
+---
+
+## HTML/PDF Export (After Diagram Rendering)
+
+After rendering diagrams to PNG, export the full document to HTML/PDF:
+
+```bash
+node ~/.claude/tools/markdown-export/convert.js <document-path> --verbose
+```
+
+### What the HTML Export Does
+
+1. **Embeds images inline** as base64 data URIs for self-contained HTML
+2. **Renders Mermaid blocks** client-side via Mermaid.js with ELK layout
+3. **Applies max-height** (`80vh`) to images so they fit on screen without scrolling
+4. **Adds pan/zoom viewer** — clicking any image opens an interactive overlay with:
+   - Mouse wheel zoom (centered on cursor)
+   - Click-drag pan
+   - Double-click to toggle fit/1:1
+   - Touch: pinch-zoom and drag
+   - Keyboard: `+`/`-` zoom, `0` fit, `1` actual size, `Esc` close
+   - Control bar with zoom buttons and percentage display
+5. **Generates PDF** via Puppeteer with rendered diagrams
+6. **Copies diagrams** to `export/html/diagrams/` for reference
+
+### HTML Export Features
+
+| Feature | Details |
+|---------|---------|
+| **Image embedding** | All PNGs/JPGs converted to base64 data URIs |
+| **Image max-height** | `80vh` — diagrams never require page scrolling |
+| **Image click** | Opens pan/zoom overlay (not blank tab) |
+| **SVG embedding** | SVGs inlined as `<svg>` elements |
+| **Mermaid** | Client-side rendering with ELK layout engine |
+| **Code highlighting** | highlight.js with GitHub theme |
+| **PDF** | Puppeteer-based, waits for Mermaid render |
+
+### HTML Renderer: Angle Bracket Escaping
+
+The mermaid renderer (`render-mermaid.js`) automatically escapes angle brackets in HTML `<pre>` context to prevent them being parsed as HTML tags. This handles:
+- `%% @prefix ex: <http://...>` comments — `<` escaped to `&lt;`
+- Preserves allowed HTML tags in labels: `<br/>`, `<b>`, `<i>`, `<u>`, `<em>`, `<strong>`, `<sub>`, `<sup>`
+- Without this, mermaid blocks with URL comments silently fail (rendering as 53,854-byte error PNGs)

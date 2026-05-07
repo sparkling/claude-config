@@ -42,7 +42,7 @@ flowchart LR
 More content...
 ```
 
-### Step 2: Export Diagrams to SVG
+### Step 2: Export Diagrams to PNG
 
 After creating/editing a document with Mermaid blocks, run:
 
@@ -51,9 +51,12 @@ node ~/.claude/tools/mermaid-renderer/process-document.js <document-path> --verb
 ```
 
 **Options:**
+- `--format=<fmt>` - Output format: `png` (default) or `svg`
 - `--theme=<theme>` - Mermaid theme: `default`, `forest`, `dark`, `neutral`
 - `--verbose` - Show detailed progress
 - `--dry-run` - Preview without making changes
+
+**NOTE**: PNG is the default format for maximum compatibility with markdown previewers (VS Code, GitHub, Zed). Use `--format=svg` only when scalable vector output is specifically needed.
 
 ### Step 3: Result Structure
 
@@ -68,9 +71,9 @@ The tool will:
 document.md
 diagrams/
 └── document/
-    ├── diagram-1.svg
-    ├── diagram-2.svg
-    └── architecture-diagram.svg
+    ├── diagram-1.png
+    ├── diagram-2.png
+    └── architecture-diagram.png
 ```
 
 **Document transformation:**
@@ -246,8 +249,37 @@ Puppeteer needs Chromium. Install globally: `npm install -g puppeteer`
 - Check Mermaid syntax at https://mermaid.live
 - Ensure valid ELK config if using `layout: elk`
 
+### Diagram renders as 53,854-byte error PNG
+This is the mermaid "Syntax error in text" placeholder. Common causes:
+- `classDef class` — `class` is a reserved keyword. Use `cls` instead
+- Angle brackets in comments (`%% <http://...>`) — the renderer escapes these automatically, but if rendering standalone, wrap in `escapeForHtmlPre()`
+- `\n` in labels — use `<br/>` instead
+- Run `bash ~/.claude/tools/mermaid-renderer/validate-diagrams.sh <doc>` to test all blocks
+
 ### SVG too large/small
 The tool auto-sizes based on diagram content. For custom sizing, use the `<img>` tag with width/height attributes (see Image Sizing section below).
+
+---
+
+## HTML/PDF Export (After Rendering)
+
+After rendering diagrams to PNG, export the full document to HTML/PDF:
+
+```bash
+node ~/.claude/tools/markdown-export/convert.js <document-path> --verbose
+```
+
+The HTML export:
+- **Embeds images inline** as base64 data URIs (self-contained HTML)
+- **Caps image height** at `80vh` so diagrams fit on screen without scrolling
+- **Pan/zoom viewer** — clicking any image opens an interactive overlay:
+  - Scroll wheel: zoom centered on cursor
+  - Click-drag: pan
+  - Double-click: toggle fit/1:1
+  - Touch: pinch-zoom and drag
+  - Keyboard: `+`/`-` zoom, `0` fit, `1` actual size, `Esc` close
+- **Angle bracket escaping** in mermaid `<pre>` context (prevents HTML parsing of `<url>` in comments)
+- Generates PDF via Puppeteer with rendered diagrams
 
 ---
 
@@ -258,13 +290,13 @@ The tool auto-sizes based on diagram content. For custom sizing, use the `<img>`
 ### Correct Way (Use This)
 
 ```markdown
-<img src="diagrams/document/diagram.svg" alt="Diagram Name" width="90%">
+<img src="diagrams/document/diagram.png" alt="Diagram Name" width="90%">
 ```
 
 Or with fixed pixel width:
 
 ```markdown
-<img src="diagrams/document/diagram.svg" alt="Diagram Name" width="600">
+<img src="diagrams/document/diagram.png" alt="Diagram Name" width="600">
 ```
 
 ### Wrong Way (Never Do This)
@@ -292,7 +324,7 @@ Or with fixed pixel width:
 When including the mermaid source in a details block:
 
 ```markdown
-<img src="diagrams/document/diagram.svg" alt="Architecture Overview" width="90%">
+<img src="diagrams/document/diagram.png" alt="Architecture Overview" width="90%">
 
 <details>
 <summary>Mermaid Source</summary>

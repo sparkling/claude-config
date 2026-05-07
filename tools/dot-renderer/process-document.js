@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 const fs = require('fs').promises;
 const path = require('path');
-const { renderDotToSVG, saveOutput, LAYOUT_ENGINES } = require('./render-dot');
+const { renderDotToSVG, renderDotToPNG, saveOutput, savePNG, LAYOUT_ENGINES } = require('./render-dot');
 
 /**
  * Extract DOT code blocks from document content
@@ -149,6 +149,7 @@ ${dotCode}
 async function processDocument(documentPath, options = {}) {
   const {
     layout = null,  // null = auto-detect from diagram or use 'dot'
+    format = 'png', // 'png' (default) or 'svg'
     outputDir = null,  // null = auto-generate based on document
     dryRun = false,
     verbose = false
@@ -186,42 +187,48 @@ async function processDocument(documentPath, options = {}) {
   let newContent = content;
   const processedDiagrams = [];
 
+  const ext = format === 'png' ? '.png' : '.svg';
+
   for (let i = blocks.length - 1; i >= 0; i--) {
     const block = blocks[i];
-    const svgFileName = `${block.name}.svg`;
-    const svgPath = path.join(diagramDir, svgFileName);
-    const relativeSvgPath = path.relative(docDir, svgPath);
+    const outFileName = `${block.name}${ext}`;
+    const outPath = path.join(diagramDir, outFileName);
+    const relativeOutPath = path.relative(docDir, outPath);
 
     // Use provided layout override, or block-specific layout, or default 'dot'
     const effectiveLayout = layout || block.layout || 'dot';
 
     if (verbose) {
-      console.error(`  Rendering: ${block.name} -> ${relativeSvgPath} (layout: ${effectiveLayout})`);
+      console.error(`  Rendering: ${block.name} -> ${relativeOutPath} (layout: ${effectiveLayout}, format: ${format})`);
     }
 
     if (!dryRun) {
       try {
-        // Render diagram
-        const svg = await renderDotToSVG(block.code, { layout: effectiveLayout });
-        await saveOutput(svg, svgPath);
+        if (format === 'png') {
+          const pngBuffer = await renderDotToPNG(block.code, { layout: effectiveLayout });
+          await savePNG(pngBuffer, outPath);
+        } else {
+          const svg = await renderDotToSVG(block.code, { layout: effectiveLayout });
+          await saveOutput(svg, outPath);
+        }
 
         // Generate replacement syntax
-        const replacement = getImageSyntax(docExt, relativeSvgPath, block.name, block.code, effectiveLayout);
+        const replacement = getImageSyntax(docExt, relativeOutPath, block.name, block.code, effectiveLayout);
 
         // Replace in content
         newContent = newContent.slice(0, block.startIndex) + replacement + newContent.slice(block.endIndex);
 
         processedDiagrams.push({
           name: block.name,
-          svgPath: svgPath,
-          relativePath: relativeSvgPath,
+          outputPath: outPath,
+          relativePath: relativeOutPath,
           layout: effectiveLayout
         });
       } catch (err) {
         console.error(`  Error rendering ${block.name}: ${err.message}`);
       }
     } else {
-      console.log(`Would render: ${block.name} -> ${relativeSvgPath} (layout: ${effectiveLayout})`);
+      console.log(`Would render: ${block.name} -> ${relativeOutPath} (layout: ${effectiveLayout})`);
     }
   }
 
@@ -248,6 +255,7 @@ async function main() {
     console.log('Usage: process-document.js <document> [options]');
     console.log('');
     console.log('Options:');
+    console.log('  --format=<fmt>      Output format: png (default) or svg');
     console.log(`  --layout=<engine>   Override layout engine for all diagrams`);
     console.log(`                      (${LAYOUT_ENGINES.join('|')})`);
     console.log('  --output=<dir>      Custom output directory for diagrams');
@@ -276,13 +284,21 @@ async function main() {
 
   const options = {
     layout: null,
+    format: 'png',
     outputDir: null,
     dryRun: false,
     verbose: false
   };
 
   for (const flag of flags) {
-    if (flag.startsWith('--layout=')) {
+    if (flag.startsWith('--format=')) {
+      const fmt = flag.split('=')[1];
+      if (!['png', 'svg'].includes(fmt)) {
+        console.error(`Invalid format: ${fmt}. Use: png or svg`);
+        process.exit(1);
+      }
+      options.format = fmt;
+    } else if (flag.startsWith('--layout=')) {
       const requestedLayout = flag.split('=')[1];
       if (!LAYOUT_ENGINES.includes(requestedLayout)) {
         console.error(`Invalid layout: ${requestedLayout}`);

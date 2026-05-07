@@ -510,12 +510,12 @@ config:
   layout: elk
 ---
 flowchart LR
-    classDef class fill:#DDA0DD,stroke:#000
+    classDef cls fill:#DDA0DD,stroke:#000
     classDef instance fill:#ADD8E6,stroke:#000
     classDef literal fill:#FFFACD,stroke:#000
 
-    Person["Person"]:::class
-    Employee["Employee"]:::class
+    Person["Person"]:::cls
+    Employee["Employee"]:::cls
     John["John Smith"]:::instance
     StartDate["2024-01-15"]:::literal
 

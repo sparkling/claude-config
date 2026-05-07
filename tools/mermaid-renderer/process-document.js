@@ -1,122 +1,93 @@
 #!/usr/bin/env node
 const fs = require('fs').promises;
 const path = require('path');
-const { renderMermaidToSVG, saveSVG } = require('./render-mermaid');
-
-// Single source of truth: ~/.claude/skills/diagramming/theme-variables.json
-const themeVarsPath = path.join(require('os').homedir(), '.claude/skills/diagramming/theme-variables.json');
-const { light: THEME_LIGHT, dark: THEME_DARK } = JSON.parse(require('fs').readFileSync(themeVarsPath, 'utf-8'));
+const { renderMermaidToSVG, saveSVG, renderMermaidToPNG, savePNG } = require('./render-mermaid');
 
 /**
  * Find already-rendered diagram patterns in the document.
- * Three patterns are recognised:
- *   1. Old markdown ![alt](name.svg) — legacy single-theme. Migrates to paired on re-render.
- *   2. Old HTML <img src="name.svg"> — legacy single-theme. Migrates to paired on re-render.
- *   3. New paired <img class="diagram-pair" src="name.light.svg" data-dark-src="name.dark.svg"> — steady state.
+ * Supports both markdown ![name](path) and HTML <img> tags followed by <details> containing mermaid source
  *
- * Returns array of { name, lightPath, darkPath?, mermaidCode, altText, fullMatch, startIndex, endIndex, syntax, legacy }
- * where `legacy: true` means the pattern is old-single and the document should be rewritten to paired.
+ * Returns array of { imagePath, mermaidCode, name, startIndex, endIndex }
  */
 function findRenderedDiagrams(content) {
   const diagrams = [];
-  let match;
 
-  // Pattern 0 (preferred): Paired <img class="diagram-pair" ... data-dark-src="...">
-  const pairedPattern = /<img\s+[^>]*class=["'][^"']*\bdiagram-pair\b[^"']*["'][^>]*>\s*\n\s*\n\s*<details>\s*\n\s*<summary>Mermaid Source<\/summary>\s*\n\s*\n\s*```mermaid\s*\n([\s\S]*?)```\s*\n\s*\n\s*<\/details>/gi;
-  while ((match = pairedPattern.exec(content)) !== null) {
-    const tag = match[0];
-    const srcMatch = tag.match(/\bsrc=["']([^"']+)["']/i);
-    const darkMatch = tag.match(/\bdata-dark-src=["']([^"']+)["']/i);
-    const altMatch = tag.match(/\balt=["']([^"']*)["']/i);
-    const lightPath = srcMatch ? srcMatch[1] : null;
-    const darkPath = darkMatch ? darkMatch[1] : null;
-    if (!lightPath || !darkPath) continue;
-    const mermaidCode = match[1].trim();
-    const altText = altMatch ? altMatch[1] : '';
-    const base = path.basename(lightPath, path.extname(lightPath)).replace(/\.light$/, '');
-    diagrams.push({
-      name: base || altText || 'diagram',
-      lightPath,
-      darkPath,
-      mermaidCode,
-      altText,
-      fullMatch: match[0],
-      startIndex: match.index,
-      endIndex: match.index + match[0].length,
-      syntax: 'paired',
-      legacy: false
-    });
-  }
+  // Pattern 1: Markdown image syntax
+  // ![alt-text](diagrams/path/name.svg)
+  //
+  // <details>
+  // <summary>Mermaid Source</summary>
+  //
+  // ```mermaid
+  // ...code...
+  // ```
+  //
+  // </details>
 
-  // Pattern 1 (legacy): markdown ![alt](name.svg) followed by <details>
   const markdownPattern = /!\[([^\]]*)\]\(([^)]+\.(?:svg|png))\)\s*\n\s*\n\s*<details>\s*\n\s*<summary>Mermaid Source<\/summary>\s*\n\s*\n\s*```mermaid\s*\n([\s\S]*?)```\s*\n\s*\n\s*<\/details>/gi;
+
+  let match;
   while ((match = markdownPattern.exec(content)) !== null) {
     const altText = match[1];
     const imagePath = match[2];
     const mermaidCode = match[3].trim();
-    // Skip if another matcher already caught this region
-    if (diagrams.some(d => overlaps(d, match.index, match.index + match[0].length))) continue;
-    const name = path.basename(imagePath, path.extname(imagePath)).replace(/\.(light|dark)$/, '') || altText || 'diagram';
+
+    // Extract name from image path or alt text
+    const name = path.basename(imagePath, path.extname(imagePath)) || altText || 'diagram';
+
     diagrams.push({
       name,
-      lightPath: imagePath,
-      darkPath: null, // derived on re-render
+      imagePath,
       mermaidCode,
       altText,
       fullMatch: match[0],
       startIndex: match.index,
       endIndex: match.index + match[0].length,
-      syntax: 'markdown',
-      legacy: true
+      syntax: 'markdown'
     });
   }
 
-  // Pattern 2 (legacy): HTML <img> without diagram-pair class followed by <details>
-  const imgTagPattern = /<img\s+(?![^>]*class=["'][^"']*\bdiagram-pair\b)[^>]*src=["']([^"']+\.(?:svg|png))["'][^>]*>\s*\n\s*\n\s*<details>\s*\n\s*<summary>Mermaid Source<\/summary>\s*\n\s*\n\s*```mermaid\s*\n([\s\S]*?)```\s*\n\s*\n\s*<\/details>/gi;
+  // Pattern 2: HTML <img> tag syntax
+  // <img src="diagrams/path/name.svg" alt="alt-text" width="50%">
+  //
+  // <details>
+  // <summary>Mermaid Source</summary>
+  //
+  // ```mermaid
+  // ...code...
+  // ```
+  //
+  // </details>
+
+  const imgTagPattern = /<img\s+[^>]*src=["']([^"']+\.(?:svg|png))["'][^>]*>\s*\n\s*\n\s*<details>\s*\n\s*<summary>Mermaid Source<\/summary>\s*\n\s*\n\s*```mermaid\s*\n([\s\S]*?)```\s*\n\s*\n\s*<\/details>/gi;
+
   while ((match = imgTagPattern.exec(content)) !== null) {
     const imagePath = match[1];
     const mermaidCode = match[2].trim();
-    if (diagrams.some(d => overlaps(d, match.index, match.index + match[0].length))) continue;
+
+    // Try to extract alt text from the img tag
     const altMatch = match[0].match(/alt=["']([^"']*)["']/i);
     const altText = altMatch ? altMatch[1] : '';
-    const name = path.basename(imagePath, path.extname(imagePath)).replace(/\.(light|dark)$/, '') || altText || 'diagram';
+
+    // Extract name from image path or alt text
+    const name = path.basename(imagePath, path.extname(imagePath)) || altText || 'diagram';
+
     diagrams.push({
       name,
-      lightPath: imagePath,
-      darkPath: null,
+      imagePath,
       mermaidCode,
       altText,
       fullMatch: match[0],
       startIndex: match.index,
       endIndex: match.index + match[0].length,
-      syntax: 'html',
-      legacy: true
+      syntax: 'html'
     });
   }
 
+  // Sort by startIndex to maintain document order
   diagrams.sort((a, b) => a.startIndex - b.startIndex);
+
   return diagrams;
-}
-
-function overlaps(existing, start, end) {
-  return !(end <= existing.startIndex || start >= existing.endIndex);
-}
-
-/**
- * Given an existing image path (possibly `...svg`, `...light.svg`, or `...dark.svg`),
- * return the canonical `{ light, dark }` pair derived from the same directory.
- */
-function derivePairPaths(existingPath) {
-  const dir = path.dirname(existingPath);
-  const ext = path.extname(existingPath);
-  let base = path.basename(existingPath, ext);
-  base = base.replace(/\.(light|dark)$/, '');
-  const sep = dir && dir !== '.' ? '/' : '';
-  const prefix = dir && dir !== '.' ? `${dir}${sep}` : '';
-  return {
-    light: `${prefix}${base}.light${ext}`,
-    dark: `${prefix}${base}.dark${ext}`
-  };
 }
 
 /**
@@ -171,30 +142,15 @@ function findStandaloneMermaidBlocks(content) {
 }
 
 /**
- * Escape double-quotes for embedding in HTML attribute values.
+ * Detect document type and return appropriate image syntax
  */
-function htmlAttr(value) {
-  return String(value || '').replace(/"/g, '&quot;');
-}
-
-/**
- * Detect document type and return appropriate image syntax.
- * For .md/.html/.mdx emits a paired <img class="diagram-pair" src="...light.svg" data-dark-src="...dark.svg">
- * so that dark-mode-aware consumers (markdown-export HTML, custom viewers) can swap between the two.
- * Falls back to single-image for .rst/.adoc where custom HTML doesn't round-trip cleanly.
- */
-function getImageSyntax(docType, paths, altText, diagramCode) {
-  // paths: { light, dark }
-  const light = paths.light;
-  const dark = paths.dark;
-  const altEsc = htmlAttr(altText);
-
-  const pairedImg = `<img class="diagram-pair" src="${htmlAttr(light)}" data-dark-src="${htmlAttr(dark)}" alt="${altEsc}">`;
+function getImageSyntax(docType, imagePath, altText, diagramCode) {
+  const relativePath = imagePath;
 
   switch (docType) {
     case '.md':
     case '.markdown':
-      return `${pairedImg}
+      return `![${altText}](${relativePath})
 
 <details>
 <summary>Mermaid Source</summary>
@@ -207,7 +163,7 @@ ${diagramCode}
 
     case '.html':
     case '.htm':
-      return `${pairedImg}
+      return `<img src="${relativePath}" alt="${altText}" style="max-width: 100%; height: auto;">
 
 <details>
 <summary>Mermaid Source</summary>
@@ -217,7 +173,7 @@ ${diagramCode}
 </details>`;
 
     case '.mdx':
-      return `<img class="diagram-pair" src="${htmlAttr(light)}" data-dark-src="${htmlAttr(dark)}" alt="${altEsc}" />
+      return `<img src="${relativePath}" alt="${altText}" style={{maxWidth: '100%', height: 'auto'}} />
 
 <details>
 <summary>Mermaid Source</summary>
@@ -229,7 +185,7 @@ ${diagramCode}
 </details>`;
 
     case '.rst':
-      return `.. image:: ${light}
+      return `.. image:: ${relativePath}
    :alt: ${altText}
    :width: 100%
 
@@ -241,7 +197,7 @@ ${diagramCode}
 
     case '.adoc':
     case '.asciidoc':
-      return `image::${light}[${altText},width=100%]
+      return `image::${relativePath}[${altText},width=100%]
 
 ////
 Original Mermaid diagram (uncomment to edit, then re-render):
@@ -251,7 +207,7 @@ ${diagramCode}
 ////`;
 
     default:
-      return `${pairedImg}
+      return `![${altText}](${relativePath})
 
 <details>
 <summary>Mermaid Source</summary>
@@ -273,6 +229,7 @@ ${diagramCode}
 async function processDocument(documentPath, options = {}) {
   const {
     theme = 'default',
+    format = 'png',
     outputDir = null,
     dryRun = false,
     verbose = false
@@ -297,115 +254,109 @@ async function processDocument(documentPath, options = {}) {
   const processedDiagrams = [];
   let newContent = content;
 
-  async function renderPair(mermaidCode, lightAbs, darkAbs) {
-    await fs.mkdir(path.dirname(lightAbs), { recursive: true });
-    await fs.mkdir(path.dirname(darkAbs), { recursive: true });
-    const darkCode = mermaidCode
-      .replace(/^\s*classDef\s+.+$/gm, '')
-      .replace(/^%%\{\s*init\s*:[\s\S]*?\}%%$/gm, '');
-    const [lightSvg, darkSvg] = await Promise.all([
-      renderMermaidToSVG(mermaidCode, { theme: 'base', themeVariables: THEME_LIGHT }),
-      renderMermaidToSVG(darkCode, { theme: 'base', themeVariables: THEME_DARK })
-    ]);
-    await saveSVG(lightSvg, lightAbs);
-    await saveSVG(darkSvg, darkAbs);
-  }
-
-  // PHASE 1: Re-render existing diagrams (paired + legacy patterns)
+  // PHASE 1: Re-render existing diagrams (image + details pattern)
   const renderedDiagrams = findRenderedDiagrams(content);
+
   if (verbose && renderedDiagrams.length > 0) {
-    console.error(`Found ${renderedDiagrams.length} already-rendered diagram(s)`);
+    console.error(`Found ${renderedDiagrams.length} already-rendered diagram(s) to update`);
   }
 
-  // Process in reverse order so text migrations preserve indices
-  const sortedRendered = [...renderedDiagrams].sort((a, b) => b.startIndex - a.startIndex);
-  for (const diagram of sortedRendered) {
-    // Determine paired paths
-    const pair = diagram.darkPath
-      ? { light: diagram.lightPath, dark: diagram.darkPath }
-      : derivePairPaths(diagram.lightPath);
-    const lightAbs = path.resolve(docDir, pair.light);
-    const darkAbs = path.resolve(docDir, pair.dark);
+  for (const diagram of renderedDiagrams) {
+    // Resolve the image path relative to document directory
+    const absoluteImagePath = path.resolve(docDir, diagram.imagePath);
+
+    // Detect format from existing file extension
+    const existingExt = path.extname(absoluteImagePath).toLowerCase();
+    const renderAsPng = existingExt === '.png' || (existingExt !== '.svg' && format === 'png');
 
     if (verbose) {
-      const tag = diagram.legacy ? 'migrate' : 're-render';
-      console.error(`  ${tag}: ${diagram.name}`);
-      console.error(`      light -> ${pair.light}`);
-      console.error(`      dark  -> ${pair.dark}`);
+      console.error(`  Re-rendering: ${diagram.name} -> ${diagram.imagePath} (${renderAsPng ? 'png' : 'svg'})`);
     }
 
     if (!dryRun) {
       try {
-        await renderPair(diagram.mermaidCode, lightAbs, darkAbs);
+        // Ensure output directory exists
+        await fs.mkdir(path.dirname(absoluteImagePath), { recursive: true });
 
-        // If this was a legacy single-theme diagram, migrate the markdown pattern to paired.
-        if (diagram.legacy) {
-          const replacement = getImageSyntax(docExt, pair, diagram.altText || diagram.name, diagram.mermaidCode);
-          newContent = newContent.slice(0, diagram.startIndex) + replacement + newContent.slice(diagram.endIndex);
+        if (renderAsPng) {
+          const pngBuffer = await renderMermaidToPNG(diagram.mermaidCode, { theme });
+          await savePNG(pngBuffer, absoluteImagePath);
+        } else {
+          const svg = await renderMermaidToSVG(diagram.mermaidCode, { theme });
+          await saveSVG(svg, absoluteImagePath);
         }
 
         processedDiagrams.push({
           name: diagram.name,
-          lightPath: lightAbs,
-          darkPath: darkAbs,
-          lightRelative: pair.light,
-          darkRelative: pair.dark,
-          type: diagram.legacy ? 'migrated' : 're-render'
+          pngPath: absoluteImagePath,
+          relativePath: diagram.imagePath,
+          type: 're-render'
         });
       } catch (err) {
-        console.error(`  Error rendering pair for ${diagram.name}: ${err.message}`);
+        console.error(`  Error re-rendering ${diagram.name}: ${err.message}`);
       }
     } else {
-      console.log(`Would render pair for: ${diagram.name}`);
+      console.log(`Would re-render: ${diagram.name} -> ${diagram.imagePath}`);
     }
   }
 
   // PHASE 2: Process standalone mermaid blocks (new diagrams)
   const standaloneBlocks = findStandaloneMermaidBlocks(content);
+
   if (verbose && standaloneBlocks.length > 0) {
     console.error(`Found ${standaloneBlocks.length} new standalone mermaid block(s)`);
   }
 
-  // Reverse order preserves source indices as we splice in replacements.
+  // Process in reverse order to preserve indices when replacing
+  const ext = format === 'png' ? '.png' : '.svg';
+
   for (let i = standaloneBlocks.length - 1; i >= 0; i--) {
     const block = standaloneBlocks[i];
-    const lightPath = path.join(diagramDir, `${block.name}.light.svg`);
-    const darkPath = path.join(diagramDir, `${block.name}.dark.svg`);
-    const relLight = path.relative(docDir, lightPath);
-    const relDark = path.relative(docDir, darkPath);
+    const outFileName = `${block.name}${ext}`;
+    const outPath = path.join(diagramDir, outFileName);
+    const relativeOutPath = path.relative(docDir, outPath);
 
     if (verbose) {
-      console.error(`  Rendering new: ${block.name}`);
-      console.error(`      light -> ${relLight}`);
-      console.error(`      dark  -> ${relDark}`);
+      console.error(`  Rendering new: ${block.name} -> ${relativeOutPath} (${format})`);
     }
 
     if (!dryRun) {
       try {
+        // Ensure output directory exists
         await fs.mkdir(diagramDir, { recursive: true });
-        await renderPair(block.code, lightPath, darkPath);
-        const replacement = getImageSyntax(docExt, { light: relLight, dark: relDark }, block.name, block.code);
+
+        // Render diagram in requested format
+        if (format === 'png') {
+          const pngBuffer = await renderMermaidToPNG(block.code, { theme });
+          await savePNG(pngBuffer, outPath);
+        } else {
+          const svg = await renderMermaidToSVG(block.code, { theme });
+          await saveSVG(svg, outPath);
+        }
+
+        // Generate replacement syntax
+        const replacement = getImageSyntax(docExt, relativeOutPath, block.name, block.code);
+
+        // Replace in content
         newContent = newContent.slice(0, block.startIndex) + replacement + newContent.slice(block.endIndex);
 
         processedDiagrams.push({
           name: block.name,
-          lightPath,
-          darkPath,
-          lightRelative: relLight,
-          darkRelative: relDark,
+          outputPath: outPath,
+          relativePath: relativeOutPath,
           type: 'new'
         });
       } catch (err) {
         console.error(`  Error rendering ${block.name}: ${err.message}`);
       }
     } else {
-      console.log(`Would render new pair for: ${block.name}`);
+      console.log(`Would render new: ${block.name} -> ${relativeOutPath}`);
     }
   }
 
-  // Persist document when we emitted new diagrams OR migrated legacy references
-  const docChanged = processedDiagrams.some(d => d.type === 'new' || d.type === 'migrated');
-  if (!dryRun && docChanged) {
+  // Write updated document only if we added new diagrams
+  const hasNewDiagrams = processedDiagrams.some(d => d.type === 'new');
+  if (!dryRun && hasNewDiagrams) {
     await fs.writeFile(absolutePath, newContent, 'utf-8');
     if (verbose) {
       console.error(`Updated document: ${absolutePath}`);
@@ -413,11 +364,9 @@ async function processDocument(documentPath, options = {}) {
   }
 
   if (verbose) {
-    const counts = processedDiagrams.reduce((acc, d) => {
-      acc[d.type] = (acc[d.type] || 0) + 1;
-      return acc;
-    }, {});
-    console.error('Summary:', Object.entries(counts).map(([k, v]) => `${v} ${k}`).join(', ') || '(nothing to do)');
+    const rerendered = processedDiagrams.filter(d => d.type === 're-render').length;
+    const newDiagrams = processedDiagrams.filter(d => d.type === 'new').length;
+    console.error(`Summary: ${rerendered} re-rendered, ${newDiagrams} new`);
   }
 
   return {
@@ -435,6 +384,7 @@ async function main() {
     console.log('Usage: process-document.js <document> [options]');
     console.log('');
     console.log('Options:');
+    console.log('  --format=<fmt>      Output format: png (default) or svg');
     console.log('  --theme=<theme>     Mermaid theme (default|forest|dark|neutral)');
     console.log('  --output=<dir>      Custom output directory for diagrams');
     console.log('  --dry-run           Show what would be done without making changes');
@@ -457,13 +407,21 @@ async function main() {
 
   const options = {
     theme: 'default',
+    format: 'png',
     outputDir: null,
     dryRun: false,
     verbose: false
   };
 
   for (const flag of flags) {
-    if (flag.startsWith('--theme=')) {
+    if (flag.startsWith('--format=')) {
+      const fmt = flag.split('=')[1];
+      if (!['png', 'svg'].includes(fmt)) {
+        console.error(`Invalid format: ${fmt}. Use: png or svg`);
+        process.exit(1);
+      }
+      options.format = fmt;
+    } else if (flag.startsWith('--theme=')) {
       options.theme = flag.split('=')[1];
     } else if (flag.startsWith('--output=')) {
       options.outputDir = flag.split('=')[1];

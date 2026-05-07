@@ -1,12 +1,12 @@
 ---
 name: dot-export
-description: Export DOT/Graphviz diagrams from documents to SVG images. Use after creating documents with DOT code blocks when you need to render them as static images for distribution, GitHub, wikis, or static sites. Supports multiple layout engines (dot, neato, circo, fdp, twopi, osage, patchwork). Processes .md, .html, .mdx, .rst, .adoc files.
+description: Export DOT/Graphviz diagrams from documents to PNG images (default) or SVG. Use after creating documents with DOT code blocks when you need to render them as static images for distribution, GitHub, wikis, or static sites. Supports multiple layout engines (dot, neato, circo, fdp, twopi, osage, patchwork). Processes .md, .html, .mdx, .rst, .adoc files.
 allowed-tools: Bash, Read, Write, Edit
 ---
 
 # DOT/Graphviz Diagram Export Skill
 
-Automatically render DOT/Graphviz diagrams in documents to SVG images using the dot-renderer tool.
+Automatically render DOT/Graphviz diagrams in documents to PNG images (default) using the dot-renderer tool. Use `--format=svg` for scalable vector output.
 
 ---
 
@@ -44,7 +44,7 @@ digraph G {
 More content...
 ```
 
-### Step 2: Export Diagrams to SVG
+### Step 2: Export Diagrams to PNG
 
 After creating/editing a document with DOT blocks, run:
 
@@ -53,9 +53,12 @@ node ~/.claude/tools/dot-renderer/process-document.js <document-path> --verbose
 ```
 
 **Options:**
+- `--format=<fmt>` - Output format: `png` (default) or `svg`
 - `--layout=<engine>` - Force layout engine for all diagrams: `dot`, `neato`, `circo`, `fdp`, `twopi`, `osage`, `patchwork`
 - `--verbose` - Show detailed progress
 - `--dry-run` - Preview without making changes
+
+**NOTE**: PNG is the default format for maximum compatibility with markdown previewers. Use `--format=svg` when scalable vector output is needed.
 
 ### Step 3: Result Structure
 
@@ -70,9 +73,9 @@ The tool will:
 document.md
 diagrams/
 └── document/
-    ├── diagram-1.svg
-    ├── network-topology.svg
-    └── class-hierarchy.svg
+    ├── diagram-1.png
+    ├── network-topology.png
+    └── class-hierarchy.png
 ```
 
 **Document transformation:**

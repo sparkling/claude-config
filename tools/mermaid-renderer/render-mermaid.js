@@ -4,6 +4,25 @@ const fs = require('fs').promises;
 const path = require('path');
 
 /**
+ * Escape mermaid code for safe embedding in HTML <pre> tags.
+ * Angle brackets in comments (e.g. %% @prefix ex: <http://...>)
+ * are parsed as HTML tags, breaking the mermaid code.
+ * This escapes < in comments while preserving <br/> and <b>, <i> tags
+ * that mermaid legitimately uses in labels.
+ */
+function escapeForHtmlPre(code) {
+  return code.split('\n').map(line => {
+    // Lines starting with %% are mermaid comments — escape all < in them
+    if (/^\s*%%/.test(line)) {
+      return line.replace(/</g, '&lt;');
+    }
+    // For non-comment lines, escape < that are NOT part of known HTML tags
+    // Mermaid uses: <br/>, <br>, <b>, </b>, <i>, </i>, <u>, </u>
+    return line.replace(/<(?!\/?(?:br|b|i|u|em|strong|sub|sup)\s*\/?>)/gi, '&lt;');
+  }).join('\n');
+}
+
+/**
  * Renders a Mermaid diagram to SVG
  * @param {string} diagramCode - Mermaid diagram code
  * @param {object} options - Rendering options
@@ -12,7 +31,6 @@ const path = require('path');
 async function renderMermaidToSVG(diagramCode, options = {}) {
   const {
     theme = 'default',
-    themeVariables = null,
     backgroundColor = 'transparent',
     width = 1920,
     height = 1080
@@ -26,6 +44,9 @@ async function renderMermaidToSVG(diagramCode, options = {}) {
   try {
     const page = await browser.newPage();
     await page.setViewport({ width, height });
+
+    // Escape HTML-breaking characters in mermaid code while preserving <br/> tags
+    const safeCode = escapeForHtmlPre(diagramCode);
 
     const html = `
       <!DOCTYPE html>
@@ -48,7 +69,7 @@ async function renderMermaidToSVG(diagramCode, options = {}) {
       </head>
       <body>
         <pre class="mermaid">
-${diagramCode}
+${safeCode}
         </pre>
 
         <script type="module">
@@ -57,7 +78,10 @@ ${diagramCode}
 
           mermaid.registerLayoutLoaders(elkLayouts);
 
-          mermaid.initialize(${JSON.stringify({ startOnLoad: true, theme, ...(themeVariables ? { themeVariables } : {}) })});
+          mermaid.initialize({
+            startOnLoad: true,
+            theme: '${theme}'
+          });
 
           // Signal when rendering is complete
           window.mermaidReady = new Promise((resolve) => {
@@ -145,7 +169,6 @@ async function saveSVG(svgContent, outputPath) {
 async function renderMermaidToPNG(diagramCode, options = {}) {
   const {
     theme = 'default',
-    themeVariables = null,
     backgroundColor = 'white',
     width = 4800,
     height = 3200,
@@ -160,6 +183,9 @@ async function renderMermaidToPNG(diagramCode, options = {}) {
   try {
     const page = await browser.newPage();
     await page.setViewport({ width, height, deviceScaleFactor: scale });
+
+    // Escape HTML-breaking characters in mermaid code while preserving <br/> tags
+    const safeCode = escapeForHtmlPre(diagramCode);
 
     const html = `
       <!DOCTYPE html>
@@ -182,7 +208,7 @@ async function renderMermaidToPNG(diagramCode, options = {}) {
       </head>
       <body>
         <pre class="mermaid">
-${diagramCode}
+${safeCode}
         </pre>
 
         <script type="module">
@@ -191,7 +217,10 @@ ${diagramCode}
 
           mermaid.registerLayoutLoaders(elkLayouts);
 
-          mermaid.initialize(${JSON.stringify({ startOnLoad: true, theme, ...(themeVariables ? { themeVariables } : {}) })});
+          mermaid.initialize({
+            startOnLoad: true,
+            theme: '${theme}'
+          });
 
           // Signal when rendering is complete
           window.mermaidReady = new Promise((resolve) => {

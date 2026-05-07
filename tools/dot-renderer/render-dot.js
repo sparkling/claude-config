@@ -204,4 +204,83 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { renderDotToSVG, saveOutput, LAYOUT_ENGINES, OUTPUT_FORMATS };
+/**
+ * Renders a DOT diagram to PNG via SVG + Puppeteer
+ * @param {string} dotCode - DOT/Graphviz diagram code
+ * @param {object} options - Rendering options
+ * @returns {Promise<Buffer>} PNG buffer
+ */
+async function renderDotToPNG(dotCode, options = {}) {
+  const { layout = 'dot', backgroundColor = 'white', scale = 2 } = options;
+
+  // First render to SVG
+  const svg = await renderDotToSVG(dotCode, { layout, format: 'svg' });
+
+  // Then convert SVG to PNG using Puppeteer
+  let puppeteer;
+  try {
+    puppeteer = require('puppeteer');
+  } catch {
+    // Try loading from the mermaid-renderer's node_modules
+    try {
+      puppeteer = require(require('path').join(__dirname, '..', 'mermaid-renderer', 'node_modules', 'puppeteer'));
+    } catch {
+      throw new Error('Puppeteer not installed. Run: cd ~/.claude/tools/dot-renderer && npm install puppeteer');
+    }
+  }
+
+  // Extract dimensions from SVG
+  const viewBoxMatch = svg.match(/viewBox="([^"]+)"/);
+  let width = 1200, height = 800;
+  if (viewBoxMatch) {
+    const parts = viewBoxMatch[1].split(/\s+/).map(Number);
+    width = Math.ceil(parts[2]) + 40;
+    height = Math.ceil(parts[3]) + 40;
+  }
+
+  const browser = await puppeteer.launch({
+    headless: 'new',
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+  });
+
+  try {
+    const page = await browser.newPage();
+    await page.setViewport({ width, height, deviceScaleFactor: scale });
+
+    const html = `<!DOCTYPE html><html><head><style>body { margin: 0; padding: 20px; background: ${backgroundColor}; display: flex; justify-content: center; }</style></head><body>${svg}</body></html>`;
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+
+    const clip = await page.evaluate(() => {
+      const svgEl = document.querySelector('svg');
+      if (!svgEl) return null;
+      const bbox = svgEl.getBoundingClientRect();
+      return {
+        x: Math.max(0, bbox.x - 10),
+        y: Math.max(0, bbox.y - 10),
+        width: bbox.width + 20,
+        height: bbox.height + 20
+      };
+    });
+
+    const pngBuffer = await page.screenshot({
+      type: 'png',
+      clip: clip || undefined,
+      omitBackground: false
+    });
+
+    return pngBuffer;
+  } finally {
+    await browser.close();
+  }
+}
+
+/**
+ * Save PNG buffer to file
+ */
+async function savePNG(pngBuffer, outputPath) {
+  await fs.mkdir(path.dirname(outputPath), { recursive: true });
+  await fs.writeFile(outputPath, pngBuffer);
+  return outputPath;
+}
+
+module.exports = { renderDotToSVG, renderDotToPNG, saveOutput, savePNG, LAYOUT_ENGINES, OUTPUT_FORMATS };
