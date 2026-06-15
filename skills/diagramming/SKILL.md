@@ -268,6 +268,44 @@ flowchart LR
 
 ---
 
+## MANDATORY: Image sizing — generate high-res, display small via CSS, never upscale
+
+**Load-bearing rule for any document with diagrams**:
+
+1. **Generate PNGs at HIGH NATIVE RESOLUTION** (the renderer at `~/.claude/tools/mermaid-renderer/render-mermaid.js` does this by default — viewport `4800×3200`, `deviceScaleFactor: 6`, producing PNGs typically 1920px+ wide depending on diagram bbox). **Do NOT lower the resolution defaults.**
+
+2. **Display via CSS or `<img>` width attribute, never via browser upscaling.** A small PNG stretched to fill a container produces blur. A large PNG displayed at smaller width via CSS produces a crisp image AND a high-res asset available for click-to-fullscreen.
+
+3. **The HTML export's lightbox/pan-zoom viewer opens images at NATIVE resolution on click**. Combined with high-res PNGs, this means a user sees the full-fidelity diagram when they zoom in — without the browser ever upscaling.
+
+4. **Display sizing hierarchy** (priority order):
+   - **Best**: `<img src="..." alt="..." width="800">` — explicit width in HTML, scales proportionally, predictable across renderers.
+   - **Acceptable**: CSS rules `max-width: 100%; max-height: 700px` on the `img` selector — what the markdown-export skill's HTML template uses by default.
+   - **Avoid**: `width: 100%` without `max-width` (can upscale on wide screens).
+   - **Never**: `style="image-rendering: pixelated"` or any forced upscaling.
+
+5. **Recommended widths**:
+   | Diagram type | `<img>` width |
+   |--------------|--------------|
+   | Simple flowcharts | `800` (≈70% column) |
+   | Complex architectures | `1100` (≈90% column) |
+   | Sequence diagrams | `900` (≈80% column) |
+   | State machines | `700` (≈60% column) |
+   | ER diagrams | `1000` (≈85% column) |
+
+6. **CSS in HTML exports must include**:
+   ```css
+   img { max-width: 100%; max-height: 700px; height: auto; }
+   .image-viewer img { max-width: none; max-height: none; }
+   ```
+   This shrinks display, lets the viewer show native size.
+
+7. **Same rule applies to DOT/Graphviz exports** (`~/.claude/tools/dot-renderer/`) — render at high DPI, display via CSS, never upscale at the browser.
+
+If the rendered PNG looks blurry in the document, the cause is almost always browser upscaling, not the renderer. Verify with `identify <png>` — the PNG should be ≥1500px wide for any architecture diagram.
+
+---
+
 ## MANDATORY: Line Breaks — ALWAYS `<br/>`, NEVER `\n`
 
 Mermaid does NOT interpret `\n` as a line break. It renders as the **literal characters** `\n` in the output. This applies everywhere: node labels, edge labels, subgraph titles, and any quoted string.

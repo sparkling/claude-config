@@ -78,7 +78,7 @@ function generateHTML(title, bodyContent, options = {}) {
 
   <style>
     :root {
-      --max-width: 900px;
+      --max-width: 1800px;
       --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
       --font-mono: 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
       --color-text: #24292f;
@@ -560,13 +560,21 @@ function generateHTML(title, bodyContent, options = {}) {
 /**
  * Convert .md links to .html links in HTML content
  * Handles both relative and absolute paths
+ *
+ * IMPORTANT: only rewrites LOCAL relative-path .md links.
+ * Skips external URLs (https://github.com/.../foo.md etc.) so they keep
+ * pointing at the actual file on GitHub.
  */
 function convertMdLinksToHtml(htmlContent) {
-  // Match href attributes pointing to .md files
+  // Match href attributes pointing to .md files.
+  // Negative lookahead `(?!https?:\/\/|mailto:|ftp:|//)` skips:
+  //   - https:// and http:// external links
+  //   - mailto: and ftp: schemes
+  //   - protocol-relative URLs starting with //
   // Captures: href="path/to/file.md" or href='path/to/file.md'
   // Preserves anchors: href="file.md#section" → href="file.html#section"
   return htmlContent.replace(
-    /href=(["'])((?:\.\.?\/)?[^"']*?)\.md(#[^"']*)?(\1)/gi,
+    /href=(["'])(?!https?:\/\/|mailto:|ftp:|\/\/)([^"']*?)\.md(#[^"']*)?(\1)/gi,
     'href=$1$2.html$3$4'
   );
 }
@@ -897,20 +905,38 @@ async function convertFile(inputPath, options = {}) {
   const {
     format = 'both', // 'html', 'pdf', or 'both'
     theme = 'default',
-    verbose = false
+    verbose = false,
+    outRoot = null,    // if set: consolidated-tree mode; outputs land at <outRoot>/<relPath>.html
+    outBase = null     // source root to strip when computing relPath under outRoot
   } = options;
 
   const absoluteInput = path.resolve(inputPath);
   const inputDir = path.dirname(absoluteInput);
   const baseName = path.basename(absoluteInput, path.extname(absoluteInput));
 
-  // Output to export/html and export/pdf folders
-  const exportDir = path.join(inputDir, 'export');
-  const htmlDir = path.join(exportDir, 'html');
-  const pdfDir = path.join(exportDir, 'pdf');
-
-  const htmlPath = path.join(htmlDir, `${baseName}.html`);
-  const pdfPath = path.join(pdfDir, `${baseName}.pdf`);
+  // Two layouts:
+  //   (a) per-directory (default)   — <inputDir>/export/{html,pdf}/<base>.{html,pdf}
+  //   (b) consolidated-tree (--out) — <outRoot>/<input-relative-to-outBase>.{html,pdf}
+  //
+  // (b) preserves the source directory tree under outRoot, so cross-doc
+  //     [./other.md] links rewritten to [./other.html] resolve naturally.
+  let htmlDir, pdfDir, htmlPath, pdfPath;
+  if (outRoot) {
+    const absOutRoot = path.resolve(outRoot);
+    const absOutBase = outBase ? path.resolve(outBase) : path.resolve('.');
+    const relFromBase = path.relative(absOutBase, absoluteInput);
+    const relDir = path.dirname(relFromBase);
+    htmlDir = path.join(absOutRoot, 'html', relDir);
+    pdfDir = path.join(absOutRoot, 'pdf', relDir);
+    htmlPath = path.join(htmlDir, `${baseName}.html`);
+    pdfPath = path.join(pdfDir, `${baseName}.pdf`);
+  } else {
+    const exportDir = path.join(inputDir, 'export');
+    htmlDir = path.join(exportDir, 'html');
+    pdfDir = path.join(exportDir, 'pdf');
+    htmlPath = path.join(htmlDir, `${baseName}.html`);
+    pdfPath = path.join(pdfDir, `${baseName}.pdf`);
+  }
 
   if (verbose) {
     console.error(`Converting: ${absoluteInput}`);
@@ -1027,15 +1053,20 @@ async function main() {
     console.log('  --format=<fmt>      Output format: html, pdf, or both (default: both)');
     console.log('  --theme=<theme>     Mermaid theme (default|forest|dark|neutral)');
     console.log('  --verbose           Show detailed progress');
+    console.log('  --out=<dir>         Consolidated-tree mode: emit to <dir>/{html,pdf}/<rel>.html');
+    console.log('                      mirroring source tree under <dir>, so cross-doc');
+    console.log('                      relative links resolve. Glob root inferred from');
+    console.log('                      pattern unless --out-base overrides.');
+    console.log('  --out-base=<root>   Source root to strip when computing relative paths');
+    console.log('                      under --out (only meaningful with --out).');
     console.log('');
     console.log('Output Structure:');
-    console.log('  source-folder/');
-    console.log('  ├── document.md');
-    console.log('  └── export/');
-    console.log('      ├── html/');
-    console.log('      │   └── document.html');
-    console.log('      └── pdf/');
-    console.log('          └── document.pdf');
+    console.log('  Default (per-directory):');
+    console.log('    source-folder/');
+    console.log('    ├── document.md');
+    console.log('    └── export/{html,pdf}/document.{html,pdf}');
+    console.log('  With --out=<dir> (consolidated tree, recommended for cross-doc):');
+    console.log('    <dir>/{html,pdf}/<source-relative-path>.{html,pdf}');
     console.log('');
     console.log('Features:');
     console.log('  - GitHub-flavored Markdown');
@@ -1056,7 +1087,9 @@ async function main() {
   const options = {
     format: 'both',
     theme: 'default',
-    verbose: false
+    verbose: false,
+    outRoot: null,
+    outBase: null
   };
 
   for (const flag of flags) {
@@ -1066,6 +1099,10 @@ async function main() {
       options.theme = flag.split('=')[1];
     } else if (flag === '--verbose') {
       options.verbose = true;
+    } else if (flag.startsWith('--out=')) {
+      options.outRoot = flag.split('=')[1];
+    } else if (flag.startsWith('--out-base=')) {
+      options.outBase = flag.split('=')[1];
     }
   }
 
@@ -1076,6 +1113,21 @@ async function main() {
   }
 
   const input = positional[0];
+
+  // Infer outBase from the glob root when --out is given without --out-base.
+  // Longest prefix of the input pattern before the first wildcard becomes the
+  // base; mirroring under outRoot preserves the source tree and keeps relative
+  // cross-doc links resolvable.
+  if (options.outRoot && !options.outBase) {
+    const wildIdx = input.search(/[*?{]/);
+    if (wildIdx >= 0) {
+      const prefix = input.slice(0, wildIdx);
+      const lastSep = prefix.lastIndexOf('/');
+      options.outBase = lastSep >= 0 ? prefix.slice(0, lastSep) : '.';
+    } else {
+      options.outBase = path.dirname(input);
+    }
+  }
 
   try {
     let results;

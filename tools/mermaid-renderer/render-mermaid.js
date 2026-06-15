@@ -170,9 +170,17 @@ async function renderMermaidToPNG(diagramCode, options = {}) {
   const {
     theme = 'default',
     backgroundColor = 'white',
+    // High-native-resolution defaults: PNG output pixel count is
+    // (diagram bbox CSS-px) × deviceScaleFactor. With scale=12 a
+    // typical 800-px-wide diagram exports as ~9 600 px wide — crisp
+    // at any zoom level. Display is constrained by CSS
+    // (max-width: 100%, max-height: 700px) so the document still
+    // shows a screen-size thumbnail; click-to-zoom lightbox opens
+    // at native resolution. See ~/.claude/skills/diagramming/SKILL.md
+    // §"MANDATORY: Image sizing".
     width = 4800,
     height = 3200,
-    scale = 6
+    scale = 12
   } = options;
 
   const browser = await puppeteer.launch({
