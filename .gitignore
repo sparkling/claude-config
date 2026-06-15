@@ -60,3 +60,24 @@ statusline-command.sh
 pligins.backup/
 downloads/
 lessons/
+
+# Runtime state (per-machine; not config)
+daemon/
+sessions/
+jobs/
+chrome/
+
+# Plugin runtime/caches (per-machine)
+plugins/data/
+plugins/.last_inuse_sweep
+plugins/plugin-catalog-cache.json
+
+# One-off caches / markers
+.last-cleanup
+.last-update-result.json
+mcp-needs-auth-cache.json
+
+# Backup files
+*.bak
+*.bak-*
+*.backup.*
