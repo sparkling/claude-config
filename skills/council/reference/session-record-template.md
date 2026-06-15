@@ -124,5 +124,6 @@ Before declaring the session complete, verify:
 - [ ] Per-question tally is `N-M-K` (three exact integers; approximations only with a recorded verbatim abstention reason).
 - [ ] Queen **composed, did not fabricate** — every quotation traces to actual agent output.
 - [ ] Two-artefact discipline honoured (Full/Reduced: narrative synthesis + tally appendix + DA scorecard; Author-only: narrative only).
+- [ ] **Discussion transcript preserved** — each panellist's `working/session-NNN/<persona>.md` holds its full cross-talk verbatim (DMs mirrored, not just summarised); assembled into a `## Discussion transcript` section or sibling `session-NNN-discussion.md`; `working/` committed, not deleted (reconstruct from `subagents/agent-<id>.jsonl` if a teammate under-logged). Deliberation is replayable for posterity.
 - [ ] Dispositions routed; held dissent + re-open trigger recorded; produced record `status: proposed` pending operator ratification.
 - [ ] Track-record row added to the project's adoption record (§Track Record).

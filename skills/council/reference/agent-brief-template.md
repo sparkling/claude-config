@@ -31,16 +31,29 @@ THE QUESTIONS. For EACH question below, give:
   2. Your rationale, with the grounded citation inline.
   3. Cross-talk: respond to at least one peer's position (via SendMessage if on a team; else
      reference their position file) — agree, refine, or rebut. Parallel monologues are not a
-     deliberation.
+     deliberation. EVERY message you send a peer, and every position change a peer's argument
+     causes, MUST be mirrored verbatim into your working file (see OUTPUT). The DMs ARE the
+     deliberation — they must survive on disk for posterity, not vanish into transient inboxes
+     (the lead sees only one-line DM summaries live, so the working file is the only full record).
 
   Q1: <question>
   Q2: <question>
   ... (3–8 questions)
 
-OUTPUT. Write your positions to docs/ontology/odr/council/working/session-NNN/<your-id>.md
-(append-only). Use a "**<Name>:**" paragraph per question with the verdict, ballot, rationale,
-and citation. Be concise and specific; the Queen will compose the synthesis from your actual words
-— she will NOT put words in your mouth, so say what you mean explicitly.
+OUTPUT — your working file is the PERMANENT TRANSCRIPT of your side of the debate; it is append-only
+and you write to it AS YOU GO, not only at the end. Path:
+docs/ontology/odr/council/working/session-NNN/<your-id>.md. Record, in order:
+  1. OPENING — your initial per-question positions: a "**<Name>:**" paragraph per question with the
+     verdict, ballot, rationale, and grounded citation.
+  2. EXCHANGES — for every SendMessage you send or reply to, append a dated entry:
+     "**<Name> → <peer> (round k):** <the message you sent, VERBATIM>"; and when a peer's argument
+     moves you, "**<Name> (revised after <peer>):** <what changed and why>". Do NOT summarise — the
+     one-line SendMessage summary is for the live UI; the working file is for posterity.
+  3. FINAL — your settled per-question verdict (DA: the explicit WITHDRAW/HOLD disposition + named
+     re-open trigger).
+Be concise and specific; the Queen composes the synthesis from your actual words — she will NOT put
+words in your mouth, so say what you mean explicitly, and leave the full exchange on disk so any
+later reader can replay the deliberation.
 ```
 
 ## Devil's Advocate prompt (add to the skeleton)
