@@ -83,7 +83,7 @@ last of which no caller-side interception can reach).
 A user-level `SessionStart` hook re-runs the patcher each session, so
 newly-`npx`-fetched copies get patched too (same reapply model as
 `patch-package`). Idempotent, safe-fail on version drift (exact-anchor check
-before any write), and fully reversible via per-file `.rrg-backup`.
+before any write), and fully reversible via per-file `.rsp-backup`.
 
 ```bash
 # once, machine-wide (or use /ruflo-source-patch-install)
@@ -92,11 +92,6 @@ node "$HOME/.claude/skills/ruflo-source-patch/scripts/install.mjs"
 # uninstall — reverts every patched file byte-for-byte (or /ruflo-source-patch-uninstall)
 node "$HOME/.claude/skills/ruflo-source-patch/scripts/uninstall.mjs"
 ```
-
-> Supersedes the earlier `ruflo-root-guard` skill, which intercepted callers
-> (MCP launch + ad-hoc Bash calls) but could not reach ruflo's plugin-hook
-> invocation path — the dominant sprawl vector. Source-patching removes that
-> whole class of gap.
 
 Source: [`skills/ruflo-source-patch/`](https://github.com/sparkling/claude-config/tree/main/skills/ruflo-source-patch)
 
