@@ -48,16 +48,42 @@ tools/                    # Rendering tools (Mermaid, DOT, Markdown export)
 
 | Skill | Description |
 |-------|-------------|
+| `3d-diagramming` | Interactive 3D linked-data/knowledge-graph visualisation (3d-force-graph) |
 | `diagramming` | Mermaid and DOT/Graphviz diagram creation (18 guides) |
 | `dot-export` | DOT diagram export to PNG/SVG |
 | `mermaid-export` | Mermaid diagram export to PNG |
 | `markdown-editor` | Markdown editing |
 | `notebook` | Jupyter notebook creation |
+| `odr-create` | Create a new Ontology Decision Record with sequential numbering |
+| `odr-index` | Build/rebuild the ODR index and dependency graph |
+| `odr-review` | Lint ODR frontmatter/structure against the DCAP profile |
 | `owl` | OWL 2 ontology design |
 | `qlever` | QLever SPARQL engine configuration |
+| `ruflo-root-guard` | Anchors ruflo/@claude-flow to the project root, stopping `.claude-flow`/`.swarm` folder & daemon proliferation from cwd drift (ruvnet/ruflo#2633 workaround) |
 | `shacl` | SHACL data validation |
 | `skos` | SKOS knowledge organization |
 | `sparql` | SPARQL query writing and optimization |
+
+#### `ruflo-root-guard` in detail
+
+Registers two hooks — `SessionStart` (silently anchors each project's
+`.mcp.json` on first visit) and `PreToolUse` (rewrites ad-hoc
+`npx ruflo`/`npx @claude-flow/cli` Bash calls to run at project root) —
+so `.claude-flow`/`.swarm` state, and the daemons keyed off it, can never
+be created away from the project root by Claude Code's cwd drift. No npm
+package: plain local scripts, idempotent, offline, cleanly removable.
+
+```bash
+# once, ever, machine-wide (or use /ruflo-root-guard-install)
+node "$HOME/.claude/skills/ruflo-root-guard/scripts/install.mjs"
+
+# uninstall (or /ruflo-root-guard-uninstall)
+node "$HOME/.claude/skills/ruflo-root-guard/scripts/uninstall.mjs"
+
+# one repo only, no global hooks
+node "$HOME/.claude/skills/ruflo-root-guard/scripts/install.mjs" --scope project [path]
+node "$HOME/.claude/skills/ruflo-root-guard/scripts/uninstall.mjs" --scope project [path]
+```
 
 ### Tools
 
