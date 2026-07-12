@@ -59,7 +59,7 @@ tools/                    # Rendering tools (Mermaid, DOT, Markdown export)
 | `odr-review` | Lint ODR frontmatter/structure against the DCAP profile |
 | `owl` | OWL 2 ontology design |
 | `qlever` | QLever SPARQL engine configuration |
-| `ruflo-root-guard` | Anchors ruflo/@claude-flow to the project root, stopping `.claude-flow`/`.swarm` folder & daemon proliferation from cwd drift (ruvnet/ruflo#2633 workaround) |
+| [`ruflo-root-guard`](#ruflo-root-guard-in-detail) | Anchors ruflo/@claude-flow to the project root, stopping `.claude-flow`/`.swarm` folder & daemon proliferation from cwd drift ([ruvnet/ruflo#2633](https://github.com/ruvnet/ruflo/issues/2633) workaround) |
 | `shacl` | SHACL data validation |
 | `skos` | SKOS knowledge organization |
 | `sparql` | SPARQL query writing and optimization |
@@ -84,6 +84,15 @@ node "$HOME/.claude/skills/ruflo-root-guard/scripts/uninstall.mjs"
 node "$HOME/.claude/skills/ruflo-root-guard/scripts/install.mjs" --scope project [path]
 node "$HOME/.claude/skills/ruflo-root-guard/scripts/uninstall.mjs" --scope project [path]
 ```
+
+Source: [`skills/ruflo-root-guard/`](https://github.com/sparkling/claude-config/tree/main/skills/ruflo-root-guard)
+
+Related upstream issues (all confirmed open/reproduced against `@claude-flow/cli` 3.25.6, all part of the same `process.cwd()`-anchoring root cause):
+- [ruvnet/ruflo#2633](https://github.com/ruvnet/ruflo/issues/2633) — unbounded daemon proliferation from `.claude-flow` state anchored to `process.cwd()` with no root resolution or global registry (the primary issue this skill works around)
+- [ruvnet/ruflo#1639](https://github.com/ruvnet/ruflo/issues/1639) — MCP handlers using `process.cwd()` as artifact anchor sprawl under Claude Code cwd drift (closed as fixed, regressed — folded into #2633)
+- [ruvnet/ruflo#1115](https://github.com/ruvnet/ruflo/issues/1115) — orphan daemons from subdirectory launches, no global PID registry (closed as fixed, regressed — folded into #2633)
+- [ruvnet/ruflo#765](https://github.com/ruvnet/ruflo/issues/765) — duplicate `.claude-flow`/`.swarm` folders in subdirectories (open since 2025-09)
+- [ruvnet/ruflo#2629](https://github.com/ruvnet/ruflo/issues/2629) — `memory init` ignores `CLAUDE_FLOW_DB_PATH`, always writes `<cwd>/.swarm/memory.db` (same cwd-anchoring class, open)
 
 ### Tools
 
