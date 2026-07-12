@@ -59,33 +59,46 @@ tools/                    # Rendering tools (Mermaid, DOT, Markdown export)
 | `odr-review` | Lint ODR frontmatter/structure against the DCAP profile |
 | `owl` | OWL 2 ontology design |
 | `qlever` | QLever SPARQL engine configuration |
-| [`ruflo-root-guard`](#ruflo-root-guard-in-detail) | Anchors ruflo/@claude-flow to the project root, stopping `.claude-flow`/`.swarm` folder & daemon proliferation from cwd drift ([ruvnet/ruflo#2633](https://github.com/ruvnet/ruflo/issues/2633) workaround) |
+| [`ruflo-source-patch`](#ruflo-source-patch-in-detail) | Patches ruflo/@claude-flow's cwd-anchoring defect at source in the npm library, stopping `.claude-flow`/`.swarm` folder & daemon proliferation from cwd drift ([ruvnet/ruflo#2633](https://github.com/ruvnet/ruflo/issues/2633) workaround) |
 | `shacl` | SHACL data validation |
 | `skos` | SKOS knowledge organization |
 | `sparql` | SPARQL query writing and optimization |
 
-#### `ruflo-root-guard` in detail
+#### `ruflo-source-patch` in detail
 
-Registers two hooks — `SessionStart` (silently anchors each project's
-`.mcp.json` on first visit) and `PreToolUse` (rewrites ad-hoc
-`npx ruflo`/`npx @claude-flow/cli` Bash calls to run at project root) —
-so `.claude-flow`/`.swarm` state, and the daemons keyed off it, can never
-be created away from the project root by Claude Code's cwd drift. No npm
-package: plain local scripts, idempotent, offline, cleanly removable.
+Fixes the defect **at its source** — inside the installed `@claude-flow/cli`
+/ `@claude-flow/cli-core` npm library — rather than intercepting callers.
+Three functions anchor `.claude-flow`/`.swarm` state to raw `process.cwd()`
+instead of the project root; the patch rewrites each to resolve the nearest
+ancestor `.git` first. Because it fixes the callee, it covers **every** caller
+at once — the Bash tool, the MCP server, and ruflo's own plugin hooks (the
+last of which no caller-side interception can reach).
+
+| Function | Package / file |
+|----------|----------------|
+| `ensureDaemonRunning` | `@claude-flow/cli/.../services/daemon-autostart.js` |
+| `getMemoryRoot` | `@claude-flow/cli/.../memory/memory-initializer.js` |
+| `getProjectCwd` | `@claude-flow/cli-core/.../mcp-tools/types.js` |
+
+A user-level `SessionStart` hook re-runs the patcher each session, so
+newly-`npx`-fetched copies get patched too (same reapply model as
+`patch-package`). Idempotent, safe-fail on version drift (exact-anchor check
+before any write), and fully reversible via per-file `.rrg-backup`.
 
 ```bash
-# once, ever, machine-wide (or use /ruflo-root-guard-install)
-node "$HOME/.claude/skills/ruflo-root-guard/scripts/install.mjs"
+# once, machine-wide (or use /ruflo-source-patch-install)
+node "$HOME/.claude/skills/ruflo-source-patch/scripts/install.mjs"
 
-# uninstall (or /ruflo-root-guard-uninstall)
-node "$HOME/.claude/skills/ruflo-root-guard/scripts/uninstall.mjs"
-
-# one repo only, no global hooks
-node "$HOME/.claude/skills/ruflo-root-guard/scripts/install.mjs" --scope project [path]
-node "$HOME/.claude/skills/ruflo-root-guard/scripts/uninstall.mjs" --scope project [path]
+# uninstall — reverts every patched file byte-for-byte (or /ruflo-source-patch-uninstall)
+node "$HOME/.claude/skills/ruflo-source-patch/scripts/uninstall.mjs"
 ```
 
-Source: [`skills/ruflo-root-guard/`](https://github.com/sparkling/claude-config/tree/main/skills/ruflo-root-guard)
+> Supersedes the earlier `ruflo-root-guard` skill, which intercepted callers
+> (MCP launch + ad-hoc Bash calls) but could not reach ruflo's plugin-hook
+> invocation path — the dominant sprawl vector. Source-patching removes that
+> whole class of gap.
+
+Source: [`skills/ruflo-source-patch/`](https://github.com/sparkling/claude-config/tree/main/skills/ruflo-source-patch)
 
 Related upstream issues (all confirmed open/reproduced against `@claude-flow/cli` 3.25.6, all part of the same `process.cwd()`-anchoring root cause):
 - [ruvnet/ruflo#2633](https://github.com/ruvnet/ruflo/issues/2633) — unbounded daemon proliferation from `.claude-flow` state anchored to `process.cwd()` with no root resolution or global registry (the primary issue this skill works around)
