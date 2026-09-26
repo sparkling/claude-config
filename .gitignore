@@ -92,3 +92,10 @@ mcp-needs-auth-cache.json
 /remote-settings.json
 /ruvnet-brain/
 /skills/nano-banana/
+
+# Host-local migration archives and generated markers
+/.proven-config-version
+/backup-sparkleideas-migration/
+/namecheap-backups/
+/policy-limits.json.stamp.json
+/settings.json.pre-autostart-off
