@@ -86,10 +86,11 @@ Check system-reminder tags for [INTELLIGENCE] pattern suggestions before startin
 
 ## Model transport and subscription use
 
-- **SUBSCRIPTION AUTHENTICATION ONLY: NEVER USE API KEYS FOR MODEL EXECUTION.**
-- **NEVER USE OPENROUTER, DIRECTLY OR INDIRECTLY, FOR EXECUTION, ROUTING, FALLBACK, OR RETRY.**
+- Use the transport selected by the task or project. Native subscription routes
+  use native authentication; OpenRouter routes may use configured provider credentials.
+- If the selected provider or model is unavailable, report the exact error or
+  use only a fallback explicitly configured for that task. Never silently switch transports.
 - **SUBSCRIPTION USE HAS NO COST, TOKEN, REQUEST, INVOCATION, SEAT, OR PROVIDER-QUOTA BUDGET. DO NOT GATE, STOP, ROUTE, RETRY, QUALIFY, OR SCORE WORK ON THOSE VALUES.**
-- **IF A NATIVE SUBSCRIPTION OR REQUESTED MODEL IS UNAVAILABLE, PAUSE AND REPORT THE EXACT NATIVE CLIENT, MODEL, AND ERROR SO THE USER CAN SWITCH SUBSCRIPTION ACCOUNTS.**
 - Token and invocation counts may be optional telemetry only. Retain numeric
   controls solely for an independently documented purpose such as safety,
   containment, liveness, backpressure, protocol integrity, corpus quality,
