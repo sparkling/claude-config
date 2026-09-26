@@ -81,3 +81,14 @@ mcp-needs-auth-cache.json
 *.bak
 *.bak-*
 *.backup.*
+
+# Local credentials and machine-managed state
+/env.sh
+/hooks/herdr-agent-state.sh
+/metaharness/
+/model-router/
+/policy-limits.json
+/proven-config.json
+/remote-settings.json
+/ruvnet-brain/
+/skills/nano-banana/

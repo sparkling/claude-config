@@ -1,12 +1,58 @@
 ---
 name: markdown-editor
-description: Markdown formatting rules and validation. Use when editing or creating .md files to ensure correct blank line placement around blocks, lists, and headings.
+description: Markdown formatting and information-architecture rules. Use when editing or creating .md files, to design the heading hierarchy BEFORE writing, ban em-dashes, and enforce blank-line placement around blocks, lists, and headings.
 allowed-tools: Read, Write, Edit, Grep, Glob
 ---
 
 # Markdown Editor Skill
 
-Enforce consistent markdown formatting when editing `.md` files.
+Enforce consistent structure and formatting when editing `.md` files.
+
+## CRITICAL: Design the information architecture FIRST
+
+**Before writing a single line, decide the heading hierarchy.** Not after. Not "as you go".
+
+Write the outline down and look at it:
+
+```text
+# Document
+## Section          (a top-level concern)
+### Subsection      (one idea within it)
+#### Detail        (rarely; if you need this, the section is probably two sections)
+```
+
+Ask of every heading:
+
+1. **Is this ONE idea?** If the heading needs to say two things, it is two headings, or a heading plus a
+   lead sentence.
+2. **Is it at the right level?** A `##` under a `##` that is really its child is a flat document
+   pretending to have structure.
+3. **Would a reader scanning ONLY the headings understand the shape of the document?** The headings are
+   the document. The prose is the footnotes.
+
+A document whose structure you discover while writing is a document with no structure.
+
+## CRITICAL: Never use an em-dash (`—`), en-dash (`–`), or `--`
+
+**Banned everywhere in markdown**: headings, prose, tables, lists, bold labels. No exceptions.
+
+It is not a punctuation preference. **The dash is where bad information architecture hides.**
+
+Every one of these is two ideas welded into one line because the hierarchy was never designed:
+
+| Smell | What it really is | Fix |
+|---|---|---|
+| `## cache — how it works` | a heading and its subheading | two headings at two levels |
+| `**Write lock** — fixes #2621` | a pseudo-heading | a real `###` heading |
+| `The lock works — usually` | a hedge glued to a claim | two sentences |
+| `Anchors are literal — never line numbers` | a claim and its clarification | a sentence, then a sentence |
+
+**Do not "fix" a banned dash by swapping in a colon.** `## cache: how it works` is the same failure with
+different punctuation. Ask what the two halves ARE, then give each the structure it deserves: a heading
+level, a sentence, a list item, or a table cell.
+
+In prose, use a full stop, a comma, a colon, a semicolon, or parentheses. If a sentence genuinely needs a
+dash to hold it together, the sentence is doing too much. Split it.
 
 ## CRITICAL: Use Mermaid Diagrams, Not ASCII Art
 
